@@ -209,11 +209,14 @@ details.rec[open] summary .sm{display:none}
 .tips li{margin:6px 0}
 .small{font-size:13.5px;color:var(--muted)}
 .hidden{display:none!important}
+.legal{max-width:560px;margin:-96px auto 0;padding:0 20px 120px;text-align:center;font-size:12.5px;color:var(--muted)}.legal a{color:var(--muted)}
+.pat{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);border-radius:6px;padding:1px 6px;margin:0 0 3px}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
 <div class="cta-wrap" id="ctaWrap"><button class="cta" id="cta"></button></div>
+<p class="legal"><a href="/legal.html">Aviso legal, privacidad y cookies</a> · MojoBasket · un proyecto de AllwaysU</p>
 <div class="toast" id="toast"></div>
 <script>
 (() => {
@@ -392,7 +395,7 @@ let sample = null;
 const aB64 = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]); fr.onerror=rej; fr.readAsDataURL(b); });
 async function sampleHTTP(prompt, opts={}){
 const images=[]; for(const b of (opts.images||[]).slice(0,6)) images.push({media_type:b.type||"image/jpeg",data:await aB64(b)});
-const r=await fetch("/api/claude",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,images})});
+const r=await fetch("/api/claude",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,images,tier:opts.tier||"default"})});
 if(!r.ok){ let j={}; try{ j=await r.json(); }catch(e){} throw Object.assign(new Error(j.error||("HTTP "+r.status)),{code:r.status===429?"rate_limited":j.code}); }
 const rd=r.body.getReader(), dec=new TextDecoder(); let text="";
 for(;;){ const {done,value}=await rd.read(); if(done) break; text+=dec.decode(value,{stream:true});
@@ -401,6 +404,16 @@ try{ opts.onText?.({text}); }catch(e){} }
 return {text};
 }
 sampleHTTP.limits=async()=>({images:true});
+/** Métricas anónimas (solo web): sin datos personales ni coordenadas; la zona es el nombre del barrio o «gps/mapa». */
+const ev=(tipo,datos={})=>{ if(!STANDALONE) return; try{ navigator.sendBeacon?.("/api/evento",new Blob([JSON.stringify({tipo,...datos})],{type:"application/json"})); }catch(e){} };
+const zonaEv=()=>{ const l=posUsuario().label; return ZONAS.some(z=>z[1]===l)?l:l==="Mi ubicación"?"gps":"mapa"; };
+function evLista(plan){
+  const L=(plan.listas||[]).find(l=>l.id===plan.activa)||planListas(plan)[0]; const por={};
+  (L.lista||[]).forEach(sec=>(sec.items||[]).forEach(it=>{ if(it.despensa||it.nofound) return; const sid=it.tiendaId||(L.tipo==="mix"?null:(L.id==="u"?(plan.superIds||[])[0]:L.id)); if(!sid) return;
+    const x=por[sid]||(por[sid]={eur:0,items:0,ofertas:0}); x.eur=r2(x.eur+(+it.precio||0)*(+it.cantidad||1)); x.items++; if(it.oferta) x.ofertas++; }));
+  ev("lista",{supers:plan.superIds||[],lista_tipo:L.tipo,total:L.total,viaje:L.viaje||0,faltan:L.faltan||0,por_cadena:por,zona:zonaEv(),personas:P.people,presupuesto:P.budget,recetas:(plan.recetas||[]).length});
+}
+document.addEventListener("click",e=>{ const a=e.target.closest?.("[data-ev]"); if(a) ev("clic",{accion:a.dataset.ev,cadena:a.dataset.cad||null}); },true);
 (async()=>{ try { sample = STANDALONE ? sampleHTTP : await window.claude?.use?.("sample"); } catch(e){ sample=null } render(); })();
 
 /* ---------- render ---------- */
@@ -525,7 +538,7 @@ function summaryCard(){
 const d=P.days.filter(Boolean).length;
 return `<div class="card" style="margin-top:20px"><div class="eyebrow" style="margin-bottom:6px">Resumen</div>
 <div class="small" style="color:var(--ink)">🛒 ${esc(superName())} · 💶 ${P.budget} €/sem · 👥 ${P.people}${P.diners.every(comensalOk)&&P.diners.some(d=>metricas(d)?.kcal)?` (~${P.diners.map(metricas).reduce((a,m)=>a+(m?.kcal||0),0)} kcal/día)`:""} · 📅 ${d} días · ${P.meals.map(m=>MEALS.find(x=>x[0]===m)[1]).join(", ")||"—"}
-${P.dosha!=="none"?` · 🪷 ${esc(DOSHAS.find(x=>x[0]===P.dosha)[2])}`:""}${P.diets.length?` · 🚫 ${P.diets.length} restricciones`:""}${P.dislikes.length?` · ✋ ${P.dislikes.length} evitados`:""}</div></div>`;
+${P.dosha!=="none"?` · 🪷 ${esc(DOSHAS.find(x=>x[0]===P.dosha)[2])}`:""}${P.diets.length?` · 🚫 ${P.diets.length} restricciones`:""}${P.dislikes.length?` · ✋ ${P.dislikes.length} evitados`:""}</div></div>`+(STANDALONE?`<p class="small" style="margin:10px 2px 0">Al pulsar «Crear», tu perfil (comensales, dietas y alergias, sin nombre ni contacto) se envía a Claude solo para diseñar el menú. <a href="/legal.html#privacidad" target="_blank" rel="noopener">Privacidad</a></p>`:"");
 }
 function ctaState(){
 const s=STEPS[S.step];
@@ -913,7 +926,7 @@ const [pre,oid]=String(n.oferta_id||"").split(":"); const o=pre===s.id&&pid.get(
 if(o&&!l.some(p=>String(p.id)===String(o.id))) l.unshift(o);
 l.forEach(p=>pid.set(String(p.id),p)); return l;
 });
-const B=extractJSON((await sample(promptB(comprar,cands,s),{modelTier:"default"})).text);
+const B=extractJSON((await sample(promptB(comprar,cands,s),{modelTier:"default",tier:"rapido"})).text);
 const elegido=new Map();
 for(const x of B.seleccion||[]){
 const prod=pid.get(String(x.id)); if(!prod||!comprar[x.k]||ent.has(x.k)) continue;
@@ -926,7 +939,7 @@ optimizaFormatos(comprar,ent,elegido,s.api);
 tick(); return {s,ent,real:true,notas:B.notas};
 }
 const reales=ofertasPor[s.id]||null, rid=new Map((reales||[]).map(p=>[String(p.id),p]));
-const E=extractJSON((await sample(promptE(comprar,s,folletos[s.id]?.texto,imgs.length>0,reales),conImg({modelTier:"default"}))).text);
+const E=extractJSON((await sample(promptE(comprar,s,folletos[s.id]?.texto,imgs.length>0,reales),conImg({modelTier:"default",tier:"rapido"}))).text);
 for(const x of E.seleccion||[]){
 if(!comprar[x.k]||ent.has(x.k)) continue;
 const o=x.oferta_id&&rid.get(String(x.oferta_id).replace(/^[a-z_]+:/,""));
@@ -1021,7 +1034,7 @@ const plan=await generateMulti(sups);
 etapa("Consultando alérgenos y Nutri-Score (Open Food Facts)…",97);
 try{ await enriquecerNutricion(plan); }catch(e){ console.warn(e); }
 plan.fecha=new Date().toISOString(); plan.super=superName(); plan.budget=P.budget;
-S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0);
+S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){}
 }catch(e){ fallo(e); }
 return;
 }
@@ -1038,7 +1051,7 @@ const plan=extractJSON(r.text);
 if(!Array.isArray(plan.lista)||!Array.isArray(plan.recetas)) throw new Error("Formato incompleto");
 plan.fecha=new Date().toISOString(); plan.super=superName(); plan.budget=P.budget; plan.superIds=[s.id];
 if(fmeta) plan.folleto=fmeta;
-S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0);
+S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){}
 }catch(e){ fallo(e); }
 }
 
@@ -1090,7 +1103,7 @@ if(!items.length) return "";
 const sum=items.reduce((a,{it})=>a+(it.nofound?0:(+it.precio||0)*(+it.cantidad||1)),0);
 return `<div class="card"><div class="sec-title"><h3>${esc(sec.seccion)}</h3><span>${eur(sum)}</span></div>
 ${items.map(({it,key})=>`<div class="item${S.checked[key]?" done":""}" data-key="${esc(key)}" role="button"><span class="cb">${S.checked[key]?"✓":""}</span>
-<span class="nm"><b>${it.por_kg?String(it.cantidad).replace(".",",")+" kg · ":it.cantidad>1?it.cantidad+" × ":""}${esc(it.nombre)}</b><small>${esc([it.formato,it.uso].filter(Boolean).join(" · "))}${it.ajuste?`<span class="optn">🧮 ${it.ahorro_opt>=0?"−"+eur(it.ahorro_opt):"+"+eur(-it.ahorro_opt)+" para cubrir lo necesario"} · ${esc(it.ajuste)}</span>`:""}${it.url?` · <a href="${esc(it.url)}" target="_blank" rel="noopener" class="ext">ver ↗</a>`:""}</small>${nutriBadges(it)}</span>
+<span class="nm">${it.patrocinado?`<span class="pat">Patrocinado</span>`:""}<b>${it.por_kg?String(it.cantidad).replace(".",",")+" kg · ":it.cantidad>1?it.cantidad+" × ":""}${esc(it.nombre)}</b><small>${esc([it.formato,it.uso].filter(Boolean).join(" · "))}${it.ajuste?`<span class="optn">🧮 ${it.ahorro_opt>=0?"−"+eur(it.ahorro_opt):"+"+eur(-it.ahorro_opt)+" para cubrir lo necesario"} · ${esc(it.ajuste)}</span>`:""}${it.url?` · <a href="${esc(it.url)}" target="_blank" rel="noopener" class="ext">ver ↗</a>`:""}</small>${nutriBadges(it)}</span>
 <span class="pr">${it.nofound?"—":(it.estimado?"≈":"")+eur((+it.precio||0)*(+it.cantidad||1))}${it.oferta?`<small>${it.precio_antes?"−"+Math.round((1-it.precio/it.precio_antes)*100)+"% ":""}OFERTA</small>`:""}</span></div>`).join("")}</div>`;
 }).join("");
 const pantry=(L.lista||[]).flatMap(s=>(s.items||[]).filter(i=>i.despensa).map(i=>i.nombre));
@@ -1190,9 +1203,9 @@ return `<div class="card"><div class="sec-title"><h3>🛍️ ${esc(g.nombre)}</h
 ${g.items.map(({it,key})=>{ const url=/\/product\//.test(it.url||"")?it.url:o.buscar(qBusqueda(it));
 return `<div class="item${S.checked[key]?" done":""}" data-key="${esc(key)}" role="button"><span class="cb">${S.checked[key]?"✓":""}</span>
 <span class="nm"><b>${esc(lineaPedido(it))}</b><small>${S.checked[key]?"en el carrito":"toca para marcar como añadido"}</small></span>
-<a class="btn mini ext" href="${esc(url)}" target="_blank" rel="noopener">${/\/product\//.test(url)?"Ver":"Buscar"} ↗</a></div>`; }).join("")}
+<a class="btn mini ext" href="${esc(url)}" target="_blank" rel="noopener" data-ev="${/\/product\//.test(url)?"ver":"buscar"}" data-cad="${esc(g.sid)}">${/\/product\//.test(url)?"Ver":"Buscar"} ↗</a></div>`; }).join("")}
 <div class="actions" style="margin:12px 0 0;flex-wrap:wrap">
-<a class="btn" href="${esc(o.carrito)}" target="_blank" rel="noopener">🛒 Carrito ↗</a>
+<a class="btn" href="${esc(o.carrito)}" target="_blank" rel="noopener" data-ev="carrito" data-cad="${esc(g.sid)}">🛒 Carrito ↗</a>
 <button class="btn" data-copiar="${gi}">📋 Copiar</button>
 <button class="btn" data-claude="${gi}">🤖 Con Claude</button></div></div>`;
 }).join("")+
@@ -1206,7 +1219,7 @@ ${(d.comidas||[]).map(c=>`<button class="meal" data-rec="${esc(c.receta)}"><span
 }
 function recetasHTML(){
 return (S.plan.recetas||[]).map(r=>`<details class="card rec" id="rec-${esc(r.id)}" ${S.open===r.id?"open":""}><summary>
-<h3>${esc(r.nombre)}</h3><div class="meta"><span>⏱ ${esc(r.tiempo_min)} min</span><span>🍽 ${esc(r.raciones)} rac.</span>${r.electrodomestico?`<span>🔧 ${esc(r.electrodomestico)}</span>`:""}${(r.etiquetas||[]).map(e=>`<span>${esc(e)}</span>`).join("")}</div>
+<h3>${esc(r.nombre)}</h3><div class="meta">${r.patrocinado?`<span class="pat">Patrocinado${r.patrocinado.marca?" · "+esc(r.patrocinado.marca):""}</span>`:""}<span>⏱ ${esc(r.tiempo_min)} min</span><span>🍽 ${esc(r.raciones)} rac.</span>${r.electrodomestico?`<span>🔧 ${esc(r.electrodomestico)}</span>`:""}${(r.etiquetas||[]).map(e=>`<span>${esc(e)}</span>`).join("")}</div>
 <span class="sm">Ver receta ›</span></summary>
 <div class="lbl">Ingredientes</div><ul>${(r.ingredientes||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul>
 <div class="lbl">Elaboración</div><ol>${(r.pasos||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ol>
@@ -1231,7 +1244,7 @@ document.querySelectorAll(".item[data-key]").forEach(el=>el.onclick=()=>{ const 
 document.querySelectorAll("[data-copiar],[data-claude]").forEach(b=>b.onclick=async()=>{
 const gs=pedidosDe(listaActiva()); const g=gs[+(b.dataset.copiar??b.dataset.claude)]; if(!g) return;
 const txt=b.dataset.claude!=null?promptClaudeChrome(g,ONLINE[g.sid]):`🛒 Pedido ${g.nombre}\n`+g.items.map(({it})=>"☐ "+lineaPedido(it)).join("\n");
-try{ await navigator.clipboard.writeText(txt); toast(b.dataset.claude!=null?"Instrucción copiada: pégala en Claude en Chrome":"Lista copiada"); }catch(e){ toast("No se pudo copiar"); }
+ev(b.dataset.claude!=null?"claude_chrome":"copiar",{cadena:g.sid}); try{ await navigator.clipboard.writeText(txt); toast(b.dataset.claude!=null?"Instrucción copiada: pégala en Claude en Chrome":"Lista copiada"); }catch(e){ toast("No se pudo copiar"); }
 });
 document.querySelectorAll("[data-optx],[data-optm],[data-optt],[data-optmodo]").forEach(b=>b.onclick=()=>{
 const p=S.plan; p.optParams={...OPT_DEF,...(p.optParams||{})};
