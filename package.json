@@ -1,0 +1,18 @@
+{
+  "name": "quecompro-precios",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2",
+    "@vercel/functions": "^3.10.3",
+    "cheerio": "^1.0.0"
+  }
+}
