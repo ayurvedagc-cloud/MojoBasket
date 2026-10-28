@@ -16,7 +16,7 @@ C.usaBlob({
 });
 const { cuenta } = await import("../lib/cuentaApi.js");
 
-const res = () => ({ s: 0, h: {}, body: null, status(c) { this.s = c; return this; }, setHeader(k, v) { this.h[k.toLowerCase()] = v; }, send(b) { this.body = JSON.parse(b); }, end() {} });
+const res = () => ({ s: 0, h: {}, body: null, status(c) { this.s = c; return this; }, setHeader(k, v) { this.h[k.toLowerCase()] = v; }, send(b) { try { this.body = JSON.parse(b); } catch { this.body = b; } }, end() {} });
 const req = (accion, { method = "GET", body, cookie, q = {}, ip = "1.1.1.1" } = {}) => ({ method, body, query: { accion, ...q }, headers: { host: "localhost:3000", cookie: cookie || "", "x-forwarded-for": ip } });
 const llama = async (...a) => { const r = res(); await cuenta(req(...a), r); return r; };
 
@@ -36,12 +36,16 @@ test("flujo completo de cuenta", async () => {
   const e = await llama("enlace", { method: "POST", body: { email: " Ana@Ejemplo.ES " } });
   assert.equal(e.s, 200);
   const t = new URL(e.body.dev_url).searchParams.get("t");
-  const en = await llama("entrar", { q: { t } });
-  assert.equal(en.s, 302); assert.equal(en.h.location, "/?cuenta=nueva");
+  const pg = await llama("entrar", { q: { t } });
+  assert.equal(pg.s, 200, "GET muestra la página intermedia"); assert.match(pg.body, /method="post"/); assert.match(pg.body, /ana@ejemplo\.es/);
+  assert.equal((await llama("entrar", { q: { t } })).s, 200, "los GET (escáneres) no consumen el enlace");
+  const en = await llama("entrar", { method: "POST", q: { t } });
+  assert.equal(en.s, 303); assert.equal(en.h.location, "/?cuenta=nueva");
   const cookie = en.h["set-cookie"].split(";")[0];
   assert.match(cookie, /^mb_s=/);
-  assert.equal((await llama("entrar", { q: { t } })).h.location, "/?cuenta=usado");
+  assert.equal((await llama("entrar", { method: "POST", q: { t } })).h.location, "/?cuenta=usado");
   assert.equal((await llama("entrar", { q: { t: "x.y" } })).h.location, "/?cuenta=caducado");
+  assert.equal((await llama("entrar", { method: "POST", q: { t: "x.y" } })).h.location, "/?cuenta=caducado");
 
   const yo = await llama("yo", { cookie });
   assert.equal(yo.body.sesion, true); assert.equal(yo.body.email, "ana@ejemplo.es"); assert.equal(yo.body.cuota.limite, 2);

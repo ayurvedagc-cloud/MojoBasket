@@ -86,7 +86,7 @@ pre{background:var(--bg);border-radius:12px;padding:10px;overflow:auto;max-heigh
 <header>
   <div class="hrow"><h1>MojoBasket<small>SuperAdmin</small></h1><span class="who" id="who"></span><a class="app" href="/">App</a></div>
   <nav id="tabs" class="hidden">
-    <button data-tab="resumen" class="on">Resumen</button><button data-tab="usuarios">Usuarios</button><button data-tab="uso">Uso y costes</button>
+    <button data-tab="resumen" class="on">Resumen</button><button data-tab="usuarios">Usuarios</button><button data-tab="planes">Planes</button><button data-tab="uso">Uso y costes</button>
     <button data-tab="catalogos">Catálogos</button><button data-tab="sistema">Sistema</button><button data-tab="auditoria">Auditoría</button>
   </nav>
 </header>
@@ -157,6 +157,26 @@ async usuarios(){
     <button class="btn p">Buscar</button><button type="button" class="btn" data-a="nuevo">+ Crear cuenta</button><button type="button" class="btn" data-a="csv">CSV</button></form></div>
   <div class="card"><ul class="list">${j.usuarios.map(u=>`<li class="click" data-uid="${esc(u.uid)}"><div class="tx"><b>${esc(u.email)}</b><small>Últ. acceso ${hace(u.ultimo)} · ${u.listas} listas · cuota ${u.cuota.usadas}/${u.cuota.limite??"∞"}${u.nota?" · 📝":""}</small></div>${planPill(u)}</li>`).join("")||`<li class="muted">Sin resultados.</li>`}</ul></div>`;
 },
+async planes(){
+  const j=await api("planes"), st=j.stripe, eur=(x)=>x;
+  const est={active:`<span class="pill ok">Activa</span>`,trialing:`<span class="pill ok">Prueba</span>`,past_due:`<span class="pill warn">Impago</span>`,canceled:`<span class="pill gratis">Cancelada</span>`,unpaid:`<span class="pill bad">Sin pagar</span>`,incomplete:`<span class="pill warn">Incompleta</span>`};
+  return `<h2>Planes y pagos</h2>
+  <div class="kpis"><div class="kpi"><small>Usuarios Pro</small><b>${nf.format(j.pro.total)}</b><i>${j.pro.temporales} temporales</i></div>
+    <div class="kpi"><small>Suscripciones activas</small><b>${nf.format(st.suscripciones.activas)}</b><i>${st.suscripciones.impago} con impago · ${st.suscripciones.cancelan} cancelan</i></div>
+    <div class="kpi"><small>Pro por código o manual</small><b>${nf.format(j.pro.por_codigo_o_manual)}</b><i>sin suscripción</i></div>
+    <div class="kpi"><small>Códigos</small><b>${nf.format(j.codigos.length)}</b><i>${j.codigos.filter(c=>c.activo).length} activos</i></div></div>
+  <div class="card" style="margin-top:12px"><div class="row"><h3 class="grow" style="margin:0">Stripe</h3>${st.activo?`<span class="pill ok">Activo · ${esc(st.modo)}</span>`:`<span class="pill gratis">Sin configurar</span>`}</div>
+  ${st.activo?`<dl class="kv" style="margin-top:10px"><dt>Precio mostrado</dt><dd>${esc(st.precio||"— (STRIPE_PRECIO_TEXTO)")}</dd><dt>Webhook</dt><dd><code class="small">${esc(st.webhook)}</code></dd>${st.ultimo_error?`<dt>Último error</dt><dd style="color:var(--chili)">${fecha(st.ultimo_error.t)} · ${esc(st.ultimo_error.error)}</dd>`:""}</dl><p class="small"><a href="https://dashboard.stripe.com/${st.modo==="test"?"test/":""}subscriptions" target="_blank" rel="noopener">Abrir suscripciones en Stripe ↗</a></p>`:
+  `<ol class="small" style="margin:10px 0 0;padding-left:18px;line-height:1.6"><li>En Stripe, crea un producto «MojoBasket Pro» con un precio recurrente y copia su ID (<code>price_…</code>).</li><li>En Vercel añade <code>STRIPE_SECRET_KEY</code> (sk_live_… o sk_test_…), <code>STRIPE_PRICE_PRO</code> y, opcional, <code>STRIPE_PRECIO_TEXTO</code> (p. ej. «2,99 €/mes»).</li><li>En Stripe → Developers → Webhooks, añade el endpoint <code>${esc(st.webhook)}</code> con los eventos <code>checkout.session.completed</code>, <code>customer.subscription.*</code>, <code>invoice.paid</code> e <code>invoice.payment_failed</code>.</li><li>Activa el portal de cliente en Stripe → Settings → Billing → Customer portal.</li><li>Redespliega. El botón «Hazte Pro» aparecerá en la app.</li></ol>`}</div>
+  ${j.suscriptores.length?`<div class="card"><h3 style="margin-top:0">Suscriptores</h3><ul class="list">${j.suscriptores.map(x=>`<li class="click" data-uid="${esc(x.uid)}"><div class="tx"><b>${esc(x.email)}</b><small>${x.hasta?`${x.cancela?"termina":"renueva"} ${fecha(x.hasta)}`:""}</small></div>${est[x.estado]||`<span class="pill gratis">${esc(x.estado)}</span>`}</li>`).join("")}</ul></div>`:""}
+  <div class="card"><h3 style="margin-top:0">Crear código Pro</h3><form id="fCodigo">
+    <div class="row" style="margin-bottom:8px"><input class="inp grow" name="codigo" placeholder="Código (vacío = aleatorio)" autocapitalize="characters" style="text-transform:uppercase">
+      <select class="inp" name="dias"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option><option value="365">1 año</option><option value="0">Permanente</option></select></div>
+    <div class="row" style="margin-bottom:8px"><label class="small muted">Usos <input class="inp" name="max" type="number" min="1" value="1" style="width:90px"></label><label class="small muted">Caduca <input class="inp" name="caduca" type="date"></label></div>
+    <div class="row"><input class="inp grow" name="nota" placeholder="Nota (para quién / campaña)" maxlength="200"><button class="btn p">Crear código</button></div></form></div>
+  <div class="card"><h3 style="margin-top:0">Códigos</h3><ul class="list">${j.codigos.map(c=>`<li><div class="tx"><b style="font-family:ui-monospace,monospace">${esc(c.codigo)}</b><small>${c.dias?c.dias+" días":"Permanente"} · ${c.usos}/${c.max} usos${c.caduca?" · caduca "+fdia(c.caduca):""}${c.nota?" · "+esc(c.nota):""}</small></div>
+    <button class="btn" data-a="copiar" data-txt="${esc(c.codigo)}">Copiar</button>${c.activo?`<button class="btn r" data-a="codigoOff" data-id="${esc(c.id)}">Desactivar</button>`:`<button class="btn g" data-a="codigoOn" data-id="${esc(c.id)}">Activar</button>`}</li>`).join("")||`<li class="muted">Aún no hay códigos.</li>`}</ul></div>`;
+},
 async uso(){
   const j=await api("uso",{dias:30}), d=j.dias;
   return `<h2>Uso de Claude y costes</h2>
@@ -195,6 +215,8 @@ async sistema(){
       <h3>Límites</h3><dl class="kv"><dt>Sin cuenta</dt><dd>${j.limites.anonimo.listas} listas/semana</dd><dt>Gratis</dt><dd>${j.limites.gratis.listas} listas/semana · historial ${j.limites.gratis.historial}</dd><dt>Pro</dt><dd>ilimitadas · historial ${j.limites.pro.historial}</dd></dl></div>
     <div class="card"><h3 style="margin-top:0">Variables de entorno</h3>${Object.entries(v).map(([k,ok])=>`<div class="check"><i>${ok?"✅":opc.has(k)?"▫️":"❌"}</i><code>${esc(k)}</code>${!ok&&opc.has(k)?`<span class="muted small">opcional</span>`:""}</div>`).join("")}<p class="small muted">Solo se muestra si existen, nunca su valor.</p></div>
   </div>
+  <div class="card"><div class="row"><h3 class="grow" style="margin:0">Alertas diarias</h3><button class="btn" data-a="alertas">Comprobar y enviar ahora</button></div>
+    <p class="small muted" style="margin:8px 0 0">Cada día a las ${esc(j.alertas.hora)} se comprueba el recolector, el uso y coste de Claude, los pagos y la configuración. Se envía email a ${esc(j.alertas.destinatarios)} solo si hay avisos, y los lunes con el resumen semanal.${j.alertas.ultima?` Última comprobación: ${fecha(j.alertas.ultima.t)} · ${j.alertas.ultima.avisos.length} avisos.`:""}</p><div id="alertasRes" class="small" style="margin-top:8px"></div></div>
   <div class="card"><div class="row"><h3 class="grow" style="margin:0">Email (Resend)</h3><button class="btn" data-a="email">Enviarme un email de prueba</button></div></div>
   <div class="card"><div class="row"><h3 class="grow" style="margin:0">Almacenamiento (Vercel Blob)</h3><button class="btn" data-a="almacen">Calcular</button></div><div id="almacen" class="small muted" style="margin-top:8px">Recorre todo el store con operaciones list (cuentan como operaciones avanzadas en Vercel).</div></div>
   <div class="card"><h3 style="margin-top:0">Mantenimiento</h3>
@@ -233,9 +255,9 @@ async function ficha(uid){
   <h2 style="margin-right:40px;overflow-wrap:anywhere">${esc(u.email)}</h2><p style="margin:-6px 0 12px">${planPill(u)}</p>
   ${u.bloqueado?`<div class="card" style="background:var(--chili-soft);color:var(--chili)"><b>Suspendida:</b> ${esc(u.motivo||"")}</div>`:""}
   <dl class="kv"><dt>Creada</dt><dd>${fecha(u.creado)}</dd><dt>Último acceso</dt><dd>${fecha(u.ultimo)} (${hace(u.ultimo)})</dd><dt>Accesos</dt><dd>${u.accesos}${u.accesos>=20?"+":""} enlaces usados</dd>
-    <dt>Cuota semana</dt><dd>${u.cuota?.usadas??0}/${u.cuota?.limite??"∞"}</dd><dt>Datos</dt><dd>${u.listas??0} listas · ${bytes(u.bytes||0)}</dd><dt>Plan guardado</dt><dd>${esc(u.plan_guardado||"gratis")}${u.admin?" (Pro por SuperAdmin)":""}</dd><dt>ID</dt><dd><code class="small">${esc(u.uid)}</code></dd></dl>
+    <dt>Cuota semana</dt><dd>${u.cuota?.usadas??0}/${u.cuota?.limite??"∞"}</dd><dt>Datos</dt><dd>${u.listas??0} listas · ${bytes(u.bytes||0)}</dd><dt>Plan guardado</dt><dd>${esc(u.plan_guardado||"gratis")}${u.pro_hasta?` hasta ${fecha(u.pro_hasta)}`:""}${u.admin?" (Pro por SuperAdmin)":""}</dd>${u.stripe?`<dt>Stripe</dt><dd>${esc(u.stripe.estado)}${u.stripe.hasta?` · ${u.stripe.cancela?"termina":"renueva"} ${fecha(u.stripe.hasta)}`:""} · <a href="https://dashboard.stripe.com/customers/${encodeURIComponent(u.stripe.customer||"")}" target="_blank" rel="noopener">ver ↗</a></dd>`:""}<dt>ID</dt><dd><code class="small">${esc(u.uid)}</code></dd></dl>
   <h3>Acciones</h3><div class="row">
-    ${u.plan_guardado==="pro"?`<button class="btn" data-a="plan" data-plan="gratis">Pasar a Gratis</button>`:`<button class="btn p" data-a="plan" data-plan="pro">Pasar a Pro</button>`}
+    ${u.plan_guardado==="pro"?`<button class="btn" data-a="plan" data-plan="gratis">Quitar Pro manual</button>`:`<select class="inp" id="proDias"><option value="0">Pro permanente</option><option value="30">Pro 30 días</option><option value="90">Pro 90 días</option><option value="365">Pro 1 año</option></select><button class="btn p" data-a="plan" data-plan="pro">Dar Pro</button>`}
     <button class="btn" data-a="cuota">Reiniciar cuota</button><button class="btn" data-a="revocar">Cerrar sus sesiones</button>
     <a class="btn" style="display:inline-flex;align-items:center;text-decoration:none" href="/api/admin?accion=exportar&uid=${encodeURIComponent(u.uid)}" download>Exportar datos</a>
     ${u.admin?"":u.bloqueado?`<button class="btn g" data-a="desbloquear">Reactivar</button>`:`<button class="btn r" data-a="bloquear">Suspender</button>`}</div>
@@ -269,7 +291,10 @@ document.addEventListener("click",async(e)=>{
   const hazlo=async(acc,body,ok)=>{ b.disabled=true; try{ const r=await api(acc,{},body); toast(ok||"Hecho"); return r; }catch(err){ toast("⚠️ "+err.message); throw err; }finally{ b.disabled=false; } };
   try{
     if(a==="cerrar"){ d.close(); if(ST.tab==="usuarios"||ST.tab==="resumen") pinta(); return; }
-    if(a==="plan"){ await hazlo("usuario_plan",{uid,plan:b.dataset.plan},"Plan cambiado"); return ficha(uid); }
+    if(a==="plan"){ await hazlo("usuario_plan",{uid,plan:b.dataset.plan,dias:+($("#proDias")?.value||0)},"Plan cambiado"); return ficha(uid); }
+    if(a==="copiar"){ try{ await navigator.clipboard.writeText(b.dataset.txt); toast("Copiado: "+b.dataset.txt); }catch(err){ prompt("Copia el código:",b.dataset.txt); } return; }
+    if(a==="codigoOff"||a==="codigoOn"){ await hazlo("codigo_estado",{id:b.dataset.id,activo:a==="codigoOn"},a==="codigoOn"?"Código activado":"Código desactivado"); return pinta("planes"); }
+    if(a==="alertas"){ const box=$("#alertasRes"); b.disabled=true; box.textContent="Comprobando…"; try{ const r=await api("alertas_probar",{},{}); box.innerHTML=(r.avisos.length?r.avisos.map(x=>`<div class="check"><i>${x.nivel==="alto"?"🔴":"🟡"}</i>${esc(x.texto)}</div>`).join(""):`<div class="check"><i>✅</i>Sin avisos</div>`)+`<p class="small muted">${r.enviado?"Email enviado a "+esc(r.destinatarios.join(", ")):"No se envió el email"+(r.error?": "+esc(r.error):"")}</p>`; }catch(err){ box.textContent="Error: "+err.message; } finally{ b.disabled=false; } return; }
     if(a==="cuota"){ await hazlo("usuario_cuota",{uid},"Cuota reiniciada"); return ficha(uid); }
     if(a==="revocar"){ if(!confirm("¿Cerrar todas sus sesiones abiertas?")) return; await hazlo("usuario_revocar",{uid},"Sesiones cerradas"); return; }
     if(a==="bloquear"){ const motivo=prompt("Motivo de la suspensión:"); if(!motivo) return; await hazlo("usuario_bloquear",{uid,bloqueado:true,motivo},"Cuenta suspendida"); return ficha(uid); }
@@ -300,6 +325,7 @@ document.addEventListener("click",async(e)=>{
 });
 document.addEventListener("submit",async(e)=>{
   e.preventDefault(); const f=e.target, fd=Object.fromEntries(new FormData(f));
+  if(f.id==="fCodigo"){ try{ const r=await api("codigo_crear",{},{codigo:fd.codigo,dias:+fd.dias,max:+fd.max||1,caduca:fd.caduca||null,nota:fd.nota}); toast("Código creado: "+r.codigo.codigo); try{ await navigator.clipboard.writeText(r.codigo.codigo); }catch(e){} pinta("planes"); }catch(err){ toast("⚠️ "+err.message); } return; }
   if(f.id==="fBusca"){ ST.filtro={q:fd.q||"",plan:fd.plan||"",estado:fd.estado||""}; return pinta("usuarios"); }
   if(f.id==="fNuevo"){ try{ const r=await api("usuario_crear",{},{email:fd.email,plan:fd.plan,enviar:!!fd.enviar}); toast(r.existia?"Ya existía: plan actualizado":"Cuenta creada"+(r.enviado?" y enlace enviado":"")); ficha(r.uid); }catch(err){ toast("⚠️ "+err.message); } return; }
   if(f.id==="fLogin"){ const btn=f.querySelector("button"); btn.disabled=true;

@@ -22,6 +22,9 @@ Menú semanal, recetas y lista de la compra con precios reales de los supermerca
 | `RESEND_API_KEY` / `EMAIL_FROM` | Envío del enlace de acceso (Resend, dominio mojobasket.es) |
 | `SUPERADMIN_EMAILS` | Emails (separados por comas) con plan Pro y acceso a `/admin` |
 | `PRECIO_{SONNET,HAIKU,OPUS}_{IN,OUT}` | Opcional: USD por millón de tokens para el coste estimado del panel |
+| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` | Opcional: suscripción Pro con Stripe Checkout (sin ellas no aparece «Hazte Pro») |
+| `STRIPE_PRECIO_TEXTO` | Opcional: precio que se muestra en el botón (p. ej. «2,99 €/mes») |
+| `ALERTAS_EMAIL` / `ALERTA_COSTE_DIA` | Opcional: destinatarios de las alertas (por defecto los SuperAdmin) y umbral de coste diario de Claude en USD (10) |
 
 ## Panel SuperAdmin (`/admin`)
 Acceso solo con sesión de un email de `SUPERADMIN_EMAILS` (comprobado en el servidor, `lib/admin.js`, servido por `api/app.js` → `/api/admin`).
@@ -30,7 +33,18 @@ Acceso solo con sesión de un email de `SUPERADMIN_EMAILS` (comprobado en el ser
 - **Uso y costes**: llamadas y coste estimado de Claude por día y modelo (30 días) e indicadores por supermercado.
 - **Catálogos**: frescura del recolector por cadena, histórico, forzar recolección y diagnóstico en vivo (`/api/salud`).
 - **Sistema**: despliegue, variables presentes (nunca sus valores), límites, avisos de configuración, email de prueba, tamaño de Blob por carpeta y limpieza de datos antiguos.
+- **Planes**: estado de Stripe y suscriptores, códigos Pro (duración, usos, caducidad, activar/desactivar) y Pro manual temporal o permanente.
 - **Auditoría**: toda acción del panel queda registrada cifrada en `admin/audit/`.
+
+## Acceso por enlace
+El enlace del email abre una página con el botón «Entrar» (GET no consume el enlace; el POST sí). Así los escáneres de Gmail/Outlook o el seguimiento de clics no gastan el enlace de un solo uso.
+
+## Pro
+Plan efectivo (`planDe`): SuperAdmin, suscripción de Stripe activa/en impago (`usr.stripe`), o `plan: "pro"` guardado con `pro_hasta` opcional (códigos y Pro manual temporal).
+Stripe: `POST /api/cuenta?accion=pagar` → Checkout; vuelta por `pago_ok`; webhook `POST /api/cuenta?accion=stripe_webhook` (el evento se vuelve a pedir a la API por su id, no se confía en el cuerpo); `portal` → portal de cliente.
+
+## Alertas
+Cron diario `/api/cron?tarea=alertas` (08:30 UTC): recolector al día y sin caídas de productos, Claude de ayer (tope y coste), errores de webhook e impagos, configuración peligrosa. Email solo si hay avisos; los lunes, resumen semanal.
 Las acciones POST exigen origen propio y la cabecera `x-mb-admin: 1`. Los SuperAdmin no se pueden suspender ni borrar desde el panel.
 
 ## Desarrollo

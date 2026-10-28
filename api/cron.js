@@ -1,4 +1,4 @@
-// GET /api/cron?cadena=mercadona|spar_gc|hiperdino&cp=35100[&paso=N]
+// GET /api/cron?cadena=mercadona|spar_gc|hiperdino&cp=35100[&paso=N]   ·   GET /api/cron?tarea=alertas (email diario a los SuperAdmin)
 // Recolector por tramos (categoría raíz) con auto-encadenado (<60 s por invocación). Vercel corta las cadenas de
 // autollamadas (508 Loop Detected) hacia el 4.º salto, así que el progreso se guarda en Blob (progreso.json) y varios
 // disparos de cron al día reanudan donde se quedó; cuando el catálogo del día está completo, los siguientes no hacen nada.
@@ -12,6 +12,7 @@ import * as hd from "../lib/hiperdino.js";
 import { guarda, lee, ruta, guardaHistorico, hayBlob } from "../lib/store.js";
 import { send, CP_DEFECTO } from "../lib/api.js";
 import { limpiaCuotas } from "../lib/cuenta.js";
+import { ejecutaAlertas } from "../lib/alertas.js";
 
 const PRESUPUESTO_MS = 30000;
 
@@ -36,6 +37,10 @@ export default async function handler(req, res) {
   if (!S || auth !== `Bearer ${S}`) return send(res, 401, { ok: false, error: "no autorizado" }, { cache: false });
   if (!hayBlob()) return send(res, 500, { ok: false, error: "Falta BLOB_READ_WRITE_TOKEN" }, { cache: false });
   const q = req.query || {};
+  if (q.tarea === "alertas") {
+    try { const r = await ejecutaAlertas({ base: `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || req.headers.host}` }); return send(res, 200, { ok: true, avisos: r.avisos.length, enviado: r.enviado }, { cache: false }); }
+    catch (e) { console.error("[alertas]", e); return send(res, 500, { ok: false, error: String(e.message || e) }, { cache: false }); }
+  }
   const cadena = q.cadena === "spar" ? "spar_gc" : q.cadena;
   const cp = q.cp || CP_DEFECTO;
   if (!["mercadona", "spar_gc", "hiperdino"].includes(cadena)) return send(res, 400, { ok: false, error: "cadena=mercadona|spar_gc|hiperdino" }, { cache: false });
