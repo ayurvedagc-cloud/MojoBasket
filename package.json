@@ -13,6 +13,7 @@
   "dependencies": {
     "@vercel/blob": "^2.8.2",
     "@vercel/functions": "^3.10.3",
+    "@vercel/speed-insights": "^2.0.0",
     "cheerio": "^1.0.0"
   }
 }
