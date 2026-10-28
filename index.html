@@ -1206,7 +1206,7 @@ return `<div class="res-head"><div><div class="eyebrow">${esc(p.super||superName
 ${(p.avisos||[]).length?`<div class="err" style="font-weight:500">${p.avisos.map(esc).join("<br>")}</div>`:""}${p.aviso?`<div class="err" style="font-weight:500">${esc(p.aviso)}</div>`:""}
 ${ls.length>1?`<div class="section-label" style="margin:14px 0 8px">Elige tu lista</div><div class="lsel">${ls.map(l=>`<button data-lista="${esc(l.id)}" class="${l.id===L.id?"on":""}"><b>${esc(etiquetaLista(l))}</b><span>${eur(l.total)}</span>${l.faltan?`<small>faltan ${l.faltan}</small>`:l.tipo==="mix"?`<small>${l.tiendas} súper${l.tiendas>1?"s":""}</small>`:l.real?`<small>✓ real</small>`:`<small>≈ estimado</small>`}</button>`).join("")}</div>`:""}
 ${L.folleto?`<div style="margin:6px 0 2px"><span class="pill">📰 Folleto ${esc(L.folleto.nombre||"")} · ${esc(L.folleto.desde||"")} → ${esc(L.folleto.hasta||"")}${L.folleto.url?` · <a href="${esc(L.folleto.url)}" target="_blank" rel="noopener">ver ↗</a>`:""}</span></div>`:""}
-${L.tienda?`<div style="margin:6px 0 2px"><span class="pill">🏪 ${esc(L.nombre)} ${esc(L.tienda.nombre||"")} · ofertas Lidl Plus ${esc(fechaCorta(L.tienda.desde))}→${esc(fechaCorta(L.tienda.hasta))} ${(n=>` · ✓ precio real en ${n} producto${n===1?"":"s"}`)((L.lista||[]).flatMap(s=>s.items||[]).filter(i=>i.real).length)}</span></div>`:""}
+${L.tienda?`<div style="margin:6px 0 2px"><span class="pill">�� ${esc(L.nombre)} ${esc(L.tienda.nombre||"")} · ofertas Lidl Plus ${esc(fechaCorta(L.tienda.desde))}→${esc(fechaCorta(L.tienda.hasta))} ${(n=>` · ✓ precio real en ${n} producto${n===1?"":"s"}`)((L.lista||[]).flatMap(s=>s.items||[]).filter(i=>i.real).length)}</span></div>`:""}
 ${L.real?`<div style="margin:6px 0 2px"><span class="pill">✓ Precios reales${L.tipo==="mix"?"":" "+esc(L.nombre)}${L.actualizado?" · "+new Date(L.actualizado).toLocaleString("es-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""}</span></div>`:ls.length>1&&L.tipo==="mix"?`<div style="margin:6px 0 2px"><span class="pill">≈ incluye precios estimados</span></div>`:""}
 <div class="stat"><div><small>${L.real?"Total real":"Total estimado"}</small><b>${eur(t.total)}</b></div><div><small>Presupuesto</small><b>${eur(p.budget)}</b></div><div><small>En oferta</small><b>${t.offers}</b></div></div>
 <div style="margin-top:10px">${over?`<span class="pill warn">Supera el presupuesto en ${eur(t.total-p.budget)}</span>`:`<span class="pill">Dentro del presupuesto · margen ${eur(p.budget-t.total)}</span>`}
@@ -1380,5 +1380,9 @@ document.querySelectorAll("[data-rec]").forEach(b=>b.onclick=()=>{ S.tab="receta
 render();
 })();
 </script>
+<script>
+  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
