@@ -6,6 +6,8 @@
 // Tope diario global de llamadas (CLAUDE_TOPE_DIA, por defecto 600) y uso por modelo en Blob (uso/AAAA-MM-DD.json).
 import { waitUntil } from "@vercel/functions";
 import { usoHoy, sumaUso } from "../lib/metricas.js";
+// Tokens de entrada: el Gateway puede informarlos en message_start o en message_delta, e incluir caché.
+const entrada = (u) => (u ? (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) : 0);
 import { hayBlob } from "../lib/store.js";
 
 const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
@@ -120,8 +122,8 @@ export default async function handler(req, res) {
         const line = ev.split("\n").find((l) => l.startsWith("data:")); if (!line) continue;
         let d; try { d = JSON.parse(line.slice(5)); } catch { continue; }
         if (d.type === "content_block_delta" && d.delta?.type === "text_delta") res.write(d.delta.text);
-        else if (d.type === "message_start") inTok = d.message?.usage?.input_tokens || 0;
-        else if (d.type === "message_delta") outTok = d.usage?.output_tokens || outTok;
+        else if (d.type === "message_start") inTok = entrada(d.message?.usage) || inTok;
+        else if (d.type === "message_delta") { outTok = d.usage?.output_tokens || outTok; inTok = entrada(d.usage) || inTok; }
         else if (d.type === "error") res.write("\u0000ERR:" + (d.error?.message || "error"));
       }
     }
