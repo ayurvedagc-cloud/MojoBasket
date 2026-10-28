@@ -27,3 +27,14 @@ test("agrega indicadores por cadena", () => {
   assert.equal(agrega(evs).total.combinadas, 1);
   assert.equal(agrega(evs).por_cadena.hiperdino.copiar, 1);
 });
+
+test("uso de Claude: nombres por llamada y suma sin carreras", async () => {
+  const { nombreUso, sumaNombres } = await import("../lib/metricas.js");
+  const d = new Date("2026-10-28T04:45:33.123Z");
+  const a = nombreUso("anthropic/claude-sonnet-5.5", 9496, 23855, d), b = nombreUso("anthropic/claude-haiku-5.5", 5528, 5136, d), c = nombreUso("anthropic/claude-haiku-5.5", 5157, 5196, d);
+  assert.match(a, /^uso\/2026-10-28\/044533123-[a-z0-9]{1,4}_anthropic~claude-sonnet-5\.5_9496_23855\.json$/);
+  const u = sumaNombres("2026-10-28", [a, b, c], { modelos: { "anthropic/claude-sonnet-5.5": { llamadas: 4, in: 9390, out: 63075 } } });
+  assert.equal(u.llamadas, 7);
+  assert.deepEqual(u.modelos["anthropic/claude-haiku-5.5"], { llamadas: 2, in: 10685, out: 10332 });
+  assert.equal(u.modelos["anthropic/claude-sonnet-5.5"].llamadas, 5);
+});
