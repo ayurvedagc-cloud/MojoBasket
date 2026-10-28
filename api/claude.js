@@ -124,7 +124,7 @@ export default async function handler(req, res) {
   }
 
   const content = [...imgs.map((i) => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } })), { type: "text", text: prompt }];
-  const { r, model } = await llama(dst, { max_tokens: +process.env.ANTHROPIC_MAX_TOKENS || (dst.tier === "rapido" ? 12000 : 24000), stream: true, messages: [{ role: "user", content }] });
+  const { r, model } = await llama(dst, { max_tokens: +process.env.ANTHROPIC_MAX_TOKENS || (dst.tier === "rapido" ? 12000 : 32000), stream: true, messages: [{ role: "user", content }] });
   if (!r.ok || !r.body) {
     let msg = ""; try { msg = (await r.json())?.error?.message || ""; } catch {}
     console.error(dst.via, model, r.status, msg);
