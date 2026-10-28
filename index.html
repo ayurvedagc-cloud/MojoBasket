@@ -751,7 +751,8 @@ REGLAS
 - Cuando haya objetivo ayurvédico, detox o dosha, incluye en las recetas que proceda una churna (mezcla de especias) con proporciones exactas, y explica brevemente su efecto.
 - Si el objetivo incluye salsas del mundo, incorpora salsas caseras (p.ej. chimichurri, tahini, mojo, chutney, salsa verde, harissa) adaptadas a las restricciones.
 - Cada receta debe usar solo los electrodomésticos disponibles; indica cuál.
-- Pasos concisos y accionables.
+- Pasos concisos y accionables: de 3 a 6 frases cortas por receta. Notas de 1 frase. Máximo 4 consejos.
+- SÉ CONCISO: la respuesta tiene un límite de longitud y, si se corta, no sirve.
 
 FORMATO: responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin texto adicional) con esta forma exacta:
 {"resumen":"1-2 frases sobre el enfoque de la semana",
@@ -809,8 +810,9 @@ ${REGLA_COMENSALES}
 - Marca despensa=true en básicos que probablemente ya tenga (aceite de oliva, sal, pimienta, vinagre, especias comunes); no se comprarán.
 - Ayurveda/detox/dosha: incluye churna con proporciones exactas cuando proceda. Salsas del mundo si está en objetivos. Solo electrodomésticos disponibles.
 - Respeta estrictamente dietas, alergias e ingredientes a evitar.
+- SÉ CONCISO (la respuesta tiene un límite de longitud y si se corta no sirve): pasos de 3 a 6 frases cortas por receta, sin repetir ingredientes en los pasos; notas de 1 frase; "uso" solo con ids; máximo 4 consejos. Nada de texto fuera del JSON.
 
-FORMATO: responde ÚNICAMENTE con JSON válido (sin markdown):
+FORMATO: responde ÚNICAMENTE con JSON válido y compacto (sin markdown):
 {"resumen":"1-2 frases sobre el enfoque de la semana",
 "necesidades":[{"consulta":"garbanzo cocido","cantidad":"800 g","seccion":"Legumbres","uso":"r1, r3","despensa":false,"oferta_id":null}],
 "menu":[{"dia":"Lunes","comidas":[{"tipo":"Comida","receta":"r1"}]}],

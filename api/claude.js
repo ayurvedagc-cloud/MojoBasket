@@ -124,7 +124,7 @@ export default async function handler(req, res) {
   }
 
   const content = [...imgs.map((i) => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } })), { type: "text", text: prompt }];
-  const { r, model } = await llama(dst, { max_tokens: +process.env.ANTHROPIC_MAX_TOKENS || 16000, stream: true, messages: [{ role: "user", content }] });
+  const { r, model } = await llama(dst, { max_tokens: +process.env.ANTHROPIC_MAX_TOKENS || (dst.tier === "rapido" ? 12000 : 24000), stream: true, messages: [{ role: "user", content }] });
   if (!r.ok || !r.body) {
     let msg = ""; try { msg = (await r.json())?.error?.message || ""; } catch {}
     console.error(dst.via, model, r.status, msg);
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
   }
   res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
   const rd = r.body.getReader(), dec = new TextDecoder();
-  let buf = "", inTok = 0, outTok = 0;
+  let buf = "", inTok = 0, outTok = 0, parada = null, fallo = false;
   try {
     for (;;) {
       const { done, value } = await rd.read(); if (done) break;
@@ -145,12 +145,15 @@ export default async function handler(req, res) {
         let d; try { d = JSON.parse(line.slice(5)); } catch { continue; }
         if (d.type === "content_block_delta" && d.delta?.type === "text_delta") res.write(d.delta.text);
         else if (d.type === "message_start") inTok = entrada(d.message?.usage) || inTok;
-        else if (d.type === "message_delta") { outTok = d.usage?.output_tokens || outTok; inTok = entrada(d.usage) || inTok; }
-        else if (d.type === "error") res.write("\u0000ERR:" + (d.error?.message || "error"));
+        else if (d.type === "message_delta") { outTok = d.usage?.output_tokens || outTok; inTok = entrada(d.usage) || inTok; parada = d.delta?.stop_reason || parada; }
+        else if (d.type === "error") { fallo = true; res.write("\u0000ERR:" + (d.error?.message || "error")); }
       }
     }
-  } catch (e) { res.write("\u0000ERR:" + String(e.message || e)); }
+  } catch (e) { fallo = true; res.write("\u0000ERR:" + String(e.message || e)); }
+  // Respuesta cortada por longitud: el JSON quedaría incompleto. Se avisa y no cuenta para la cuota.
+  if (parada === "max_tokens" && !fallo) { fallo = true; res.write("\u0000ERR:La respuesta de Claude salió demasiado larga y se cortó. Vuelve a intentarlo (no cuenta para tu límite semanal)."); }
   res.end();
-  console.log(JSON.stringify({ claude: dst.via, tier: dst.tier, model, in: inTok, out: outTok }));
+  if (fallo && cuota) waitUntil(C.devuelveLista(cuota).catch(() => {}));
+  console.log(JSON.stringify({ claude: dst.via, tier: dst.tier, model, in: inTok, out: outTok, stop: parada }));
   if (uso) waitUntil(sumaUso(uso, model, inTok, outTok));
 }

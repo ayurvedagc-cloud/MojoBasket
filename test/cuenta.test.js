@@ -78,11 +78,11 @@ test("flujo completo de cuenta", async () => {
 
 test("cuota en /api/claude: anónimo, pase y devolución", async () => {
   process.env.VERCEL_OIDC_TOKEN = "x";
-  let falla = false;
+  let falla = false, corta = false;
   globalThis.fetch = async (u, o) => {
     if (String(u).endsWith("/v1/models")) return new Response(JSON.stringify({ data: [{ id: "anthropic/claude-sonnet-5.5" }, { id: "anthropic/claude-haiku-5.5" }] }));
     if (falla) return new Response(JSON.stringify({ error: { message: "caído" } }), { status: 500 });
-    const sse = 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}\n\n';
+    const sse = 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}\n\n' + (corta ? 'data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"},"usage":{"output_tokens":24000}}\n\n' : "");
     return new Response(sse, { status: 200 });
   };
   const { default: h } = await import("../api/claude.js");
@@ -93,7 +93,11 @@ test("cuota en /api/claude: anónimo, pase y devolución", async () => {
   falla = true;
   assert.equal((await pide({})).s, 502);
   await new Promise((r) => setTimeout(r, 20));
-  falla = false;
+  falla = false; corta = true;
+  const t = await pide({});
+  assert.match(t.out, /\u0000ERR:.*demasiado larga/);
+  await new Promise((r) => setTimeout(r, 20));
+  corta = false;
   const a = await pide({});
   assert.equal(a.s, 200, "la cuota fallida se devolvió"); assert.equal(a.out, "ok");
   const pase = a.h["x-mb-pase"]; assert.ok(pase);
