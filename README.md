@@ -21,3 +21,8 @@ Menú semanal, recetas y lista de la compra con precios reales de los supermerca
 
 ## Desarrollo
 `npm i` y `vercel dev`. Cada push a `main` despliega en producción.
+
+## Despliegue
+Push a `main` → Vercel publica en producción (mojobasket.es). Otras ramas → preview.
+Límite Hobby: 12 funciones en `api/` (hoy 12). `/api/informe` se sirve desde `api/evento.js` vía rewrite.
+Tests: `npm test`.
