@@ -210,6 +210,28 @@ details.rec[open] summary .sm{display:none}
 .small{font-size:13.5px;color:var(--muted)}
 .hidden{display:none!important}
 .legal{max-width:560px;margin:-96px auto 0;padding:0 20px 120px;text-align:center;font-size:12.5px;color:var(--muted)}.legal a{color:var(--muted)}
+.cuenta-pill{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:15;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:700;box-shadow:var(--shadow)}
+.cuenta-pill.on{background:var(--atl);border-color:var(--atl);color:#fff}
+.app.con-pill{padding-top:58px}
+dialog.cuenta{border:0;border-radius:24px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 40px);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(31,29,27,.3)}
+dialog.cuenta::backdrop{background:rgba(31,29,27,.45)}
+.cuenta .in{padding:22px 22px 18px}
+.cuenta h2{font-family:"Fraunces",Georgia,serif;font-size:26px;line-height:1.15;margin:0 0 8px}
+.cuenta .x{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:12px;background:var(--bg);font-size:20px}
+.cuenta input[type=email]{width:100%;height:52px;border:1.5px solid var(--line);border-radius:16px;padding:0 16px;background:#fff;font-size:17px}
+.cuenta .btnp{width:100%;height:52px;border-radius:16px;background:var(--accent);font-weight:700;font-size:17px;margin-top:10px}
+.cuenta .btnp:disabled{opacity:.6}
+.cuenta .planes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.cuenta .planes div{background:var(--bg);border-radius:14px;padding:10px 12px;font-size:13.5px}
+.cuenta .planes b{display:block;font-size:15px;margin-bottom:2px}
+.cuenta .barra{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin:6px 0 4px}.cuenta .barra i{display:block;height:100%;background:var(--atl)}
+.cuenta .hist{list-style:none;margin:8px 0 0;padding:0}
+.cuenta .hist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cuenta .hist .tx{flex:1;min-width:0}.cuenta .hist .tx b{display:block}.cuenta .hist .tx small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cuenta .hist button{border-radius:12px;padding:8px 12px;font-weight:700;background:var(--atl-soft);color:var(--atl)}.cuenta .hist button.del{background:none;color:var(--muted);padding:8px}
+.cuenta .pie{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:16px;font-size:14px}.cuenta .pie a,.cuenta .pie button{color:var(--atl);font-weight:600;text-decoration:underline;padding:0}
+.cuenta .pie .rojo{color:var(--chili)}
+.cuenta .aviso{background:var(--accent-soft);border-radius:14px;padding:12px 14px;margin:0 0 12px;font-weight:600}
 .pat{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);border-radius:6px;padding:1px 6px;margin:0 0 3px}
 </style>
 </head>
@@ -218,6 +240,8 @@ details.rec[open] summary .sm{display:none}
 <div class="cta-wrap" id="ctaWrap"><button class="cta" id="cta"></button></div>
 <p class="legal"><a href="/legal.html">Aviso legal, privacidad y cookies</a> · MojoBasket · un proyecto de AllwaysU</p>
 <div class="toast" id="toast"></div>
+<button class="cuenta-pill hidden" id="cuentaBtn" aria-haspopup="dialog">Entrar</button>
+<dialog class="cuenta" id="cuentaDlg" aria-label="Tu cuenta"></dialog>
 <script>
 (() => {
 /* ---------- catálogos ---------- */
@@ -395,8 +419,11 @@ let sample = null;
 const aB64 = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(",")[1]); fr.onerror=rej; fr.readAsDataURL(b); });
 async function sampleHTTP(prompt, opts={}){
 const images=[]; for(const b of (opts.images||[]).slice(0,6)) images.push({media_type:b.type||"image/jpeg",data:await aB64(b)});
-const r=await fetch("/api/claude",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,images,tier:opts.tier||"default"})});
-if(!r.ok){ let j={}; try{ j=await r.json(); }catch(e){} throw Object.assign(new Error(j.error||("HTTP "+r.status)),{code:r.status===429?"rate_limited":j.code}); }
+const tier=opts.tier||"default";
+const r=await fetch("/api/claude",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,images,tier,pase:tier==="default"?undefined:CUENTA.pase})});
+if(!r.ok){ let j={}; try{ j=await r.json(); }catch(e){} if(j.cuota) CUENTA.cuota=j.cuota; throw Object.assign(new Error(j.error||("HTTP "+r.status)),{code:r.status===402?j.code:r.status===429?"rate_limited":j.code,sesion:j.sesion}); }
+const ps=r.headers.get("x-mb-pase"); if(ps) CUENTA.pase=ps;
+const cq=r.headers.get("x-mb-cuota"); if(cq){ try{ CUENTA.cuota=JSON.parse(decodeURIComponent(cq)); }catch(e){} }
 const rd=r.body.getReader(), dec=new TextDecoder(); let text="";
 for(;;){ const {done,value}=await rd.read(); if(done) break; text+=dec.decode(value,{stream:true});
 const k=text.indexOf("\u0000ERR:"); if(k>=0) throw new Error(text.slice(k+5)||"error de Claude");
@@ -413,8 +440,99 @@ function evLista(plan){
     const x=por[sid]||(por[sid]={eur:0,items:0,ofertas:0}); x.eur=r2(x.eur+(+it.precio||0)*(+it.cantidad||1)); x.items++; if(it.oferta) x.ofertas++; }));
   ev("lista",{supers:plan.superIds||[],lista_tipo:L.tipo,total:L.total,viaje:L.viaje||0,faltan:L.faltan||0,por_cadena:por,zona:zonaEv(),personas:P.people,presupuesto:P.budget,recetas:(plan.recetas||[]).length});
 }
+/* ---------- cuenta: enlace al email, historial en la nube y cuota gratuita (solo web) ---------- */
+const CUENTA={sesion:false,email:null,plan:null,cuota:null,gratis:null,listas:null,pase:null,activas:false,enviado:null,borrar:false};
+async function cuentaApi(accion,body,q=""){
+const r=await fetch(`/api/cuenta?accion=${accion}${q}`,body?{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}:{headers:{accept:"application/json"}});
+let j={}; try{ j=await r.json(); }catch(e){}
+if(!r.ok||j.ok===false) throw Object.assign(new Error(j.error||("HTTP "+r.status)),{status:r.status,code:j.code});
+return j;
+}
+const fechaNube=f=>{ try{ return new Date(f).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"}); }catch(e){ return ""; } };
+async function cuentaYo(){
+if(!STANDALONE) return;
+try{ const j=await cuentaApi("yo"); Object.assign(CUENTA,{activas:j.entrar!==false||!!j.sesion,sesion:!!j.sesion,email:j.email||null,plan:j.plan||j.cuota?.plan||null,cuota:j.cuota||null,gratis:j.gratis||CUENTA.gratis}); }
+catch(e){ if(e.code==="cuentas_off"||e.status===404){ CUENTA.activas=false; } }
+pintaPill();
+}
+function pintaPill(){
+const b=$("#cuentaBtn"); if(!b) return;
+b.classList.toggle("hidden",!(STANDALONE&&CUENTA.activas));
+b.classList.toggle("on",CUENTA.sesion);
+b.textContent=CUENTA.sesion?"👤 Mis listas":"Entrar";
+$("#app")?.classList.toggle("con-pill",STANDALONE&&CUENTA.activas);
+}
+async function nubeGuarda(plan){
+if(!STANDALONE||!CUENTA.sesion||!plan) return;
+try{ const j=await cuentaApi("guardar",{plan}); plan.nubeId=j.id; if(S.plan===plan) save(); CUENTA.listas=null; }
+catch(e){ if(e.status===401){ CUENTA.sesion=false; pintaPill(); } console.warn("nube",e); }
+}
+function cuotaHTML(){
+const c=CUENTA.cuota; if(!c) return "";
+if(c.limite==null) return `<p class="small" style="margin:0 0 12px">Plan Pro: listas ilimitadas · historial de ${c.historial} listas.</p>`;
+const pct=Math.min(100,Math.round(100*c.usadas/Math.max(1,c.limite)));
+return `<div style="margin:0 0 14px"><div class="small"><b style="color:var(--ink)">${c.usadas} de ${c.limite}</b> listas esta semana · se renueva el ${fechaNube(c.renueva+"T12:00:00Z")}</div><div class="barra"><i style="width:${pct}%"></i></div></div>`;
+}
+function cuentaHTML(motivo){
+const av=motivo?`<div class="aviso">${esc(motivo)}</div>`:"";
+const x=`<button class="x" data-c="cerrar" aria-label="Cerrar">✕</button>`;
+if(!CUENTA.sesion){
+const g=CUENTA.gratis||{listas:4,historial:10}, c=CUENTA.cuota;
+if(CUENTA.enviado) return `${x}<div class="in"><h2>Mira tu correo 📬</h2><p>Te he enviado un enlace a <b>${esc(CUENTA.enviado)}</b>. Ábrelo <b>en este mismo navegador</b> para entrar. Caduca en 20 minutos.</p>
+<p class="small">¿No llega? Revisa la carpeta de spam o <button data-c="otra" style="color:var(--atl);font-weight:700;text-decoration:underline">usa otro email</button>.</p></div>`;
+return `${x}<div class="in">${av}<h2>Guarda tus listas en la nube</h2>
+<p style="margin:0">Entra con tu email, sin contraseña: te llega un enlace y listo. Tus listas e historial quedan guardados y los ves en el móvil, la tablet o el ordenador.</p>
+<div class="planes"><div><b>Sin cuenta</b>${c&&c.limite!=null?`${c.limite} ${c.limite===1?"lista":"listas"} de prueba por semana${c.usadas?` (${Math.min(c.usadas,c.limite)===c.limite?"agotada":"usadas "+c.usadas})`:""}`:"Listas de prueba"}; solo en este dispositivo</div><div style="background:var(--accent-soft)"><b>Cuenta gratis</b>${g.listas} ${g.listas===1?"lista":"listas"} por semana e historial de tus últimas ${g.historial} en la nube</div></div>
+<form id="cuentaForm"><input type="email" id="cuentaEmail" required autocomplete="email" inputmode="email" placeholder="tu@email.com" aria-label="Tu email">
+<button class="btnp" id="cuentaEnviar">Enviarme el enlace</button></form>
+<p class="small" style="margin:10px 0 0">Solo guardamos tu email y tus listas, cifrados. <a href="/legal.html#privacidad" target="_blank" style="color:var(--muted)">Privacidad</a></p></div>`;
+}
+const L=CUENTA.listas;
+const hist=L==null?`<p class="small">Cargando tu historial…</p>`:!L.length?`<p class="small">Aún no tienes listas guardadas. Cada lista que crees a partir de ahora se guarda aquí.</p>`:
+`<ul class="hist">${L.map(l=>`<li><div class="tx"><b>${esc(fechaNube(l.fecha))} · ${esc(l.titulo)}${l.total?` · ${eur(l.total)}`:""}</b><small>${esc((l.recetas||[]).join(" · "))}</small></div><button data-c="abrir" data-id="${esc(l.id)}">Abrir</button><button class="del" data-c="borrarLista" data-id="${esc(l.id)}" aria-label="Borrar lista">🗑</button></li>`).join("")}</ul>`;
+const borrar=CUENTA.borrar?`<div class="aviso" style="background:var(--chili-soft);color:var(--chili)">¿Seguro? Se borrarán tu cuenta y todas tus listas de la nube. <button data-c="borrarSi" style="color:var(--chili);font-weight:800;text-decoration:underline">Sí, borrar</button> · <button data-c="borrarNo" style="text-decoration:underline">No</button></div>`:"";
+return `${x}<div class="in">${av}<h2>Mis listas</h2><p class="small" style="margin:0 0 12px">${esc(CUENTA.email)} · ${CUENTA.plan==="pro"?"Plan Pro":"Cuenta gratis"}</p>${cuotaHTML()}${hist}${borrar}
+<div class="pie"><a href="/api/cuenta?accion=exportar" download>Descargar mis datos</a><button data-c="salir">Cerrar sesión</button><button class="rojo" data-c="borrar">Borrar mi cuenta</button></div></div>`;
+}
+function pintaCuenta(motivo){ const d=$("#cuentaDlg"); if(!d) return; d.innerHTML=cuentaHTML(motivo); }
+async function abreCuenta(motivo){
+const d=$("#cuentaDlg"); if(!d) return;
+CUENTA.borrar=false; CUENTA.motivo=motivo||null; pintaCuenta(motivo);
+if(!d.open){ try{ d.showModal(); }catch(e){ d.setAttribute("open",""); } }
+if(CUENTA.sesion){ try{ const j=await cuentaApi("listas"); CUENTA.listas=j.listas||[]; }catch(e){ if(e.status===401){ CUENTA.sesion=false; pintaPill(); } CUENTA.listas=CUENTA.listas||[]; } pintaCuenta(motivo); }
+else setTimeout(()=>$("#cuentaEmail")?.focus(),50);
+}
+function cierraCuenta(){ const d=$("#cuentaDlg"); try{ d.close(); }catch(e){ d.removeAttribute("open"); } }
+if(STANDALONE){
+$("#cuentaBtn").onclick=()=>abreCuenta();
+$("#cuentaDlg").addEventListener("click",e=>{ if(e.target===e.currentTarget) cierraCuenta(); });
+$("#cuentaDlg").addEventListener("submit",async e=>{
+e.preventDefault(); const em=$("#cuentaEmail").value.trim(), b=$("#cuentaEnviar"); b.disabled=true; b.textContent="Enviando…";
+try{ await cuentaApi("enlace",{email:em}); CUENTA.enviado=em; pintaCuenta(); }
+catch(err){ b.disabled=false; b.textContent="Enviarme el enlace"; toast(err.message); }
+});
+$("#cuentaDlg").addEventListener("click",async e=>{
+const t=e.target.closest("[data-c]"); if(!t) return; const c=t.dataset.c;
+if(c==="cerrar") return cierraCuenta();
+if(c==="otra"){ CUENTA.enviado=null; return pintaCuenta(); }
+if(c==="abrir"){ try{ const j=await cuentaApi("lista",null,"&id="+encodeURIComponent(t.dataset.id)); S.plan=j.plan; S.checked={}; S.tab="lista"; S.view="result"; save(); cierraCuenta(); render(); scrollTo(0,0); }catch(err){ toast(err.message); } return; }
+if(c==="borrarLista"){ try{ await cuentaApi("borrar_lista",{id:t.dataset.id}); CUENTA.listas=(CUENTA.listas||[]).filter(l=>l.id!==t.dataset.id); if(S.plan?.nubeId===t.dataset.id){ delete S.plan.nubeId; save(); } pintaCuenta(); toast("Lista borrada"); }catch(err){ toast(err.message); } return; }
+if(c==="salir"){ try{ await cuentaApi("salir",{}); }catch(err){} Object.assign(CUENTA,{sesion:false,email:null,listas:null}); cierraCuenta(); await cuentaYo(); toast("Sesión cerrada"); return; }
+if(c==="borrar"){ CUENTA.borrar=true; return pintaCuenta(); }
+if(c==="borrarNo"){ CUENTA.borrar=false; return pintaCuenta(); }
+if(c==="borrarSi"){ try{ await cuentaApi("borrar_cuenta",{}); Object.assign(CUENTA,{sesion:false,email:null,listas:null,borrar:false}); if(S.plan) { delete S.plan.nubeId; save(); } cierraCuenta(); await cuentaYo(); toast("Cuenta borrada"); }catch(err){ toast(err.message); } return; }
+});
+(async()=>{
+const qs=new URLSearchParams(location.search), est=qs.get("cuenta");
+if(est){ qs.delete("cuenta"); history.replaceState(null,"",location.pathname+(qs.toString()?"?"+qs:"")+location.hash); }
+await cuentaYo();
+const MSG={nueva:"¡Cuenta creada! Tus listas se guardarán en la nube.",ok:"Has entrado. Tus listas se guardan en la nube.",caducado:"El enlace ha caducado o no es válido. Pide otro.",usado:"Ese enlace ya se usó. Si no has entrado, pide otro."};
+if(est&&MSG[est]){ toast(MSG[est]); if(est==="caducado"||est==="usado") abreCuenta(MSG[est]); }
+if(CUENTA.sesion&&S.plan&&!S.plan.nubeId) nubeGuarda(S.plan);
+})();
+}
 document.addEventListener("click",e=>{ const a=e.target.closest?.("[data-ev]"); if(a) ev("clic",{accion:a.dataset.ev,cadena:a.dataset.cad||null}); },true);
-(async()=>{ try { sample = STANDALONE ? sampleHTTP : await window.claude?.use?.("sample"); } catch(e){ sample=null } render(); })();
+(async()=>{ await 0; try { sample = STANDALONE ? sampleHTTP : await window.claude?.use?.("sample"); } catch(e){ sample=null } render(); })();
 
 /* ---------- render ---------- */
 function render(){
@@ -753,9 +871,10 @@ return JSON.parse(t.slice(a,b+1));
 function etapa(txt,pct){ S.etapa=txt; S.progress=pct; const e=$("#etapa"); if(e) e.textContent=txt; const bar=$(".prog i"); if(bar) bar.style.width=pct+"%"; }
 function fallo(e){
 S.view="wizard";
-const msg = e?.code==="not_granted" ? "Permiso denegado para consultar a Claude o al conector." : e?.code==="rate_limited" ? "Demasiadas peticiones. Espera un minuto y vuelve a intentarlo." : "No se pudo generar el plan ("+(e?.message||"error")+"). Inténtalo de nuevo.";
+const msg = e?.code==="cuota"||e?.code==="pase" ? e.message : e?.code==="not_granted" ? "Permiso denegado para consultar a Claude o al conector." : e?.code==="rate_limited" ? "Demasiadas peticiones. Espera un minuto y vuelve a intentarlo." : "No se pudo generar el plan ("+(e?.message||"error")+"). Inténtalo de nuevo.";
 S.error=msg; render(); toast(msg);
 $("#app").insertAdjacentHTML("beforeend",`<div class="err">${esc(msg)}</div>`);
+if(e?.code==="cuota") abreCuenta(msg);
 }
 async function leerFolleto(s){
 const f=await api(`/api/folletos?cadena=${s.folleto}`);
@@ -951,7 +1070,7 @@ ent.set(x.k,{nombre:x.nombre||comprar[x.k].consulta,formato:x.formato||"",cantid
 }
 tick(); return {s,ent,real:false,notas:E.notas};
 }catch(e){
-if(e?.code==="not_granted"||e?.code==="rate_limited") throw e;
+if(e?.code==="not_granted"||e?.code==="rate_limited"||e?.code==="cuota"||e?.code==="pase") throw e;
 avisos.push(`${s.n}: no se pudo calcular (${e.message}).`); tick(); return {s,ent:new Map(),error:e.message};
 }
 }));
@@ -1034,7 +1153,7 @@ const plan=await generateMulti(sups);
 etapa("Consultando alérgenos y Nutri-Score (Open Food Facts)…",97);
 try{ await enriquecerNutricion(plan); }catch(e){ console.warn(e); }
 plan.fecha=new Date().toISOString(); plan.super=superName(); plan.budget=P.budget;
-S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){}
+S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){} nubeGuarda(plan);
 }catch(e){ fallo(e); }
 return;
 }
@@ -1051,7 +1170,7 @@ const plan=extractJSON(r.text);
 if(!Array.isArray(plan.lista)||!Array.isArray(plan.recetas)) throw new Error("Formato incompleto");
 plan.fecha=new Date().toISOString(); plan.super=superName(); plan.budget=P.budget; plan.superIds=[s.id];
 if(fmeta) plan.folleto=fmeta;
-S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){}
+S.plan=plan; S.checked={}; S.tab="lista"; S.view="result"; save(); render(); scrollTo(0,0); try{ evLista(plan); }catch(e){} nubeGuarda(plan);
 }catch(e){ fallo(e); }
 }
 

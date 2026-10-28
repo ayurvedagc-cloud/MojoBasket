@@ -9,6 +9,7 @@ import { usoHoy, sumaUso } from "../lib/metricas.js";
 // Tokens de entrada: el Gateway puede informarlos en message_start o en message_delta, e incluir caché.
 const entrada = (u) => (u ? (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) : 0);
 import { hayBlob } from "../lib/store.js";
+import * as C from "../lib/cuenta.js";
 
 const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
 const MAX_PROMPT = 80000, MAX_IMG = 6, MAX_IMG_B64 = 2_000_000;
@@ -102,11 +103,32 @@ export default async function handler(req, res) {
   const imgs = (Array.isArray(b.images) ? b.images : []).slice(0, MAX_IMG)
     .filter((i) => /^image\/(jpeg|png|webp|gif)$/.test(i?.media_type) && typeof i.data === "string" && i.data.length <= MAX_IMG_B64);
 
+  // Cuota de la versión gratuita: cada lista empieza con una llamada "default" (menú), que consume 1 y emite un pase
+  // firmado de 30 min para las llamadas "rapido" de esa misma lista. Si Claude falla al empezar, se devuelve.
+  let cuota = null;
+  if (C.activas()) {
+    if (dst.tier === "default") {
+      const q = await C.consumeLista(req).catch((e) => { console.error("cuota", e?.message || e); return { ok: true, estado: null }; });
+      if (!q.ok) {
+        const e = q.estado, cuenta = e.quien === "cuenta";
+        return res.status(402).json({ code: "cuota", sesion: cuenta, cuota: C.publicoCuota(e),
+          error: cuenta ? (e.limite === 1 ? "Ya has usado tu lista de esta semana." : `Has usado tus ${e.limite} listas de esta semana.`) + " Se renuevan el lunes."
+            : (e.limite === 1 ? "Ya has usado tu lista de prueba de esta semana." : `Has usado tus ${e.limite} listas de prueba de esta semana.`) + " Entra con tu email para tener más gratis y guardar tu historial." });
+      }
+      cuota = q.estado;
+      res.setHeader("x-mb-pase", C.firma({ t: "p" }, 30 * 60));
+      if (cuota) res.setHeader("x-mb-cuota", encodeURIComponent(JSON.stringify(C.publicoCuota(cuota))));
+    } else if (!C.verifica(String(b.pase || req.headers["x-mb-pase"] || ""), "p")) {
+      return res.status(402).json({ code: "pase", error: "Empieza una lista nueva para continuar." });
+    }
+  }
+
   const content = [...imgs.map((i) => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } })), { type: "text", text: prompt }];
   const { r, model } = await llama(dst, { max_tokens: +process.env.ANTHROPIC_MAX_TOKENS || 16000, stream: true, messages: [{ role: "user", content }] });
   if (!r.ok || !r.body) {
     let msg = ""; try { msg = (await r.json())?.error?.message || ""; } catch {}
     console.error(dst.via, model, r.status, msg);
+    if (cuota) waitUntil(C.devuelveLista(cuota).catch(() => {}));
     return res.status(r.status === 429 ? 429 : 502).json({ error: r.status === 429 ? "Claude está saturado; inténtalo en un minuto." : "Error de Claude (" + r.status + (msg ? ": " + msg.slice(0, 160) : "") + ")", code: r.status === 429 ? "rate_limited" : "anthropic" });
   }
   res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });

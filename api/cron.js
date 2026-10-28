@@ -11,6 +11,7 @@ import * as spar from "../lib/spar.js";
 import * as hd from "../lib/hiperdino.js";
 import { guarda, lee, ruta, guardaHistorico, hayBlob } from "../lib/store.js";
 import { send, CP_DEFECTO } from "../lib/api.js";
+import { limpiaCuotas } from "../lib/cuenta.js";
 
 const PRESUPUESTO_MS = 30000;
 
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
   if (!["mercadona", "spar_gc", "hiperdino"].includes(cadena)) return send(res, 400, { ok: false, error: "cadena=mercadona|spar_gc|hiperdino" }, { cache: false });
   const t0 = Date.now();
   const hoy = new Date().toISOString().slice(0, 10);
+  if (cadena === "mercadona" && q.t === "1") waitUntil(limpiaCuotas().then((n) => n && console.log("cuotas borradas", n)).catch((e) => console.error("limpiaCuotas", e?.message || e)));
   const rutaProg = ruta(cadena, cp, "progreso");
   // Sin paso explícito (disparo del cron): reanuda desde el progreso guardado hoy; si ya está completo, no hace nada.
   let paso0 = Math.max(0, +q.paso || 0);
