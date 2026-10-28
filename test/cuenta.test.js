@@ -126,3 +126,10 @@ test("superadmin por SUPERADMIN_EMAILS", async () => {
   delete process.env.SUPERADMIN_EMAILS;
   assert.equal(C.esAdmin("jefe@ejemplo.com"), false);
 });
+
+test("superadmin también con SUPERADMIN_EMAIL (singular)", async () => {
+  const C = await import("../lib/cuenta.js");
+  process.env.SUPERADMIN_EMAIL = "citamap27@gmail.com";
+  assert.equal(C.esAdmin("CitaMap27@gmail.com"), true);
+  delete process.env.SUPERADMIN_EMAIL;
+});
