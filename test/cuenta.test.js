@@ -117,3 +117,12 @@ test("sin proveedor de email no se bloquea a los anónimos", async () => {
   process.env.CUENTAS_DEV = "1";
   assert.equal((await C.consumeLista(r)).ok, false);
 });
+
+test("superadmin por SUPERADMIN_EMAILS", async () => {
+  const C = await import("../lib/cuenta.js");
+  process.env.SUPERADMIN_EMAILS = " Jefe@Ejemplo.com , otro@x.es";
+  assert.equal(C.esAdmin("jefe@ejemplo.com"), true);
+  assert.equal(C.esAdmin("nadie@ejemplo.com"), false);
+  delete process.env.SUPERADMIN_EMAILS;
+  assert.equal(C.esAdmin("jefe@ejemplo.com"), false);
+});

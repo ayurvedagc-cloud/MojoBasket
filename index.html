@@ -451,7 +451,7 @@ return j;
 const fechaNube=f=>{ try{ return new Date(f).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"}); }catch(e){ return ""; } };
 async function cuentaYo(){
 if(!STANDALONE) return;
-try{ const j=await cuentaApi("yo"); Object.assign(CUENTA,{activas:j.entrar!==false||!!j.sesion,sesion:!!j.sesion,email:j.email||null,plan:j.plan||j.cuota?.plan||null,cuota:j.cuota||null,gratis:j.gratis||CUENTA.gratis}); }
+try{ const j=await cuentaApi("yo"); Object.assign(CUENTA,{activas:j.entrar!==false||!!j.sesion,sesion:!!j.sesion,email:j.email||null,admin:!!j.admin,plan:j.plan||j.cuota?.plan||null,cuota:j.cuota||null,gratis:j.gratis||CUENTA.gratis}); }
 catch(e){ if(e.code==="cuentas_off"||e.status===404){ CUENTA.activas=false; } }
 pintaPill();
 }
@@ -492,7 +492,7 @@ const hist=L==null?`<p class="small">Cargando tu historial…</p>`:!L.length?`<p
 `<ul class="hist">${L.map(l=>`<li><div class="tx"><b>${esc(fechaNube(l.fecha))} · ${esc(l.titulo)}${l.total?` · ${eur(l.total)}`:""}</b><small>${esc((l.recetas||[]).join(" · "))}</small></div><button data-c="abrir" data-id="${esc(l.id)}">Abrir</button><button class="del" data-c="borrarLista" data-id="${esc(l.id)}" aria-label="Borrar lista">🗑</button></li>`).join("")}</ul>`;
 const borrar=CUENTA.borrar?`<div class="aviso" style="background:var(--chili-soft);color:var(--chili)">¿Seguro? Se borrarán tu cuenta y todas tus listas de la nube. <button data-c="borrarSi" style="color:var(--chili);font-weight:800;text-decoration:underline">Sí, borrar</button> · <button data-c="borrarNo" style="text-decoration:underline">No</button></div>`:"";
 return `${x}<div class="in">${av}<h2>Mis listas</h2><p class="small" style="margin:0 0 12px">${esc(CUENTA.email)} · ${CUENTA.plan==="pro"?"Plan Pro":"Cuenta gratis"}</p>${cuotaHTML()}${hist}${borrar}
-<div class="pie"><a href="/api/cuenta?accion=exportar" download>Descargar mis datos</a><button data-c="salir">Cerrar sesión</button><button class="rojo" data-c="borrar">Borrar mi cuenta</button></div></div>`;
+<div class="pie">${CUENTA.admin?`<a href="/admin" style="color:var(--chili)">Panel SuperAdmin</a>`:""}<a href="/api/cuenta?accion=exportar" download>Descargar mis datos</a><button data-c="salir">Cerrar sesión</button><button class="rojo" data-c="borrar">Borrar mi cuenta</button></div></div>`;
 }
 function pintaCuenta(motivo){ const d=$("#cuentaDlg"); if(!d) return; d.innerHTML=cuentaHTML(motivo); }
 async function abreCuenta(motivo){
@@ -526,8 +526,8 @@ if(c==="borrarSi"){ try{ await cuentaApi("borrar_cuenta",{}); Object.assign(CUEN
 const qs=new URLSearchParams(location.search), est=qs.get("cuenta");
 if(est){ qs.delete("cuenta"); history.replaceState(null,"",location.pathname+(qs.toString()?"?"+qs:"")+location.hash); }
 await cuentaYo();
-const MSG={nueva:"¡Cuenta creada! Tus listas se guardarán en la nube.",ok:"Has entrado. Tus listas se guardan en la nube.",caducado:"El enlace ha caducado o no es válido. Pide otro.",usado:"Ese enlace ya se usó. Si no has entrado, pide otro."};
-if(est&&MSG[est]){ toast(MSG[est]); if(est==="caducado"||est==="usado") abreCuenta(MSG[est]); }
+const MSG={nueva:"¡Cuenta creada! Tus listas se guardarán en la nube.",ok:"Has entrado. Tus listas se guardan en la nube.",caducado:"El enlace ha caducado o no es válido. Pide otro.",usado:"Ese enlace ya se usó. Si no has entrado, pide otro.",bloqueado:"Esta cuenta está suspendida. Escribe a admin@allwaysu.com si crees que es un error."};
+if(est&&MSG[est]){ toast(MSG[est]); if(est==="caducado"||est==="usado"||est==="bloqueado") abreCuenta(MSG[est]); }
 if(CUENTA.sesion&&S.plan&&!S.plan.nubeId) nubeGuarda(S.plan);
 })();
 }
