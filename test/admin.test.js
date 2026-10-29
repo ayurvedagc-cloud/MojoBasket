@@ -161,3 +161,19 @@ test("alertas: detecta configuración peligrosa sin enviar", async () => {
   assert.ok(r.avisos.some((a) => /RESEND_API_KEY/.test(a.texto)));
   assert.deepEqual(r.destinatarios, ["jefe@ejemplo.com"]);
 });
+
+test("PayPal: diagnostica credenciales del otro entorno y limpia valores pegados", async () => {
+  Object.assign(process.env, { PAYPAL_CLIENT_ID: '  "AbCdEf123456XYZ"\n', PAYPAL_CLIENT_SECRET: " sec ", PAYPAL_ENV: "Sandbox " });
+  const P = await import("../lib/pagos.js");
+  let auth = null;
+  P.usaFetch(async (url, o) => {
+    auth = o.headers.authorization;
+    const live = url.startsWith("https://api-m.paypal.com");
+    return live ? { ok: true, status: 200, json: async () => ({ access_token: "t", expires_in: 3600 }) } : { ok: false, status: 401, json: async () => ({ error: "invalid_client" }) };
+  });
+  assert.equal(P.modo(), "sandbox");
+  await assert.rejects(P.creaPlan({ precio: "4,99" }), /credenciales son de PayPal LIVE/);
+  assert.equal(Buffer.from(auth.split(" ")[1], "base64").toString(), "AbCdEf123456XYZ:sec");
+  process.env.PAYPAL_ENV = "Live"; assert.equal(P.modo(), "live");
+  for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_ENV"]) delete process.env[k];
+});
