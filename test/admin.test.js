@@ -128,7 +128,9 @@ test("PayPal: suscribir, confirmar, webhook verificado contra la API y cancelar"
     if (path === "/v1/billing/subscriptions/I-SUB123456/cancel") { status = "CANCELLED"; return { ok: true, status: 204, json: async () => ({}) }; }
     return { ok: false, status: 404, json: async () => ({ message: "no" }) };
   });
-  const pg = await C_("pagar", { method: "POST", cookie: leo.cookie });
+  assert.equal((await C_("pagar", { method: "POST", cookie: leo.cookie })).body.code, "condiciones", "sin aceptar no se paga");
+  const pg = await C_("pagar", { method: "POST", cookie: leo.cookie, body: { acepto: "v1" } });
+  assert.equal((await C.leeUsuario(u)).condiciones.v, "v1");
   assert.match(pg.body.url, /ba_token=BA-1/);
   const cuerpo = JSON.parse(llamadas.find((l) => l[1] === "/v1/billing/subscriptions")[2]);
   assert.equal(cuerpo.custom_id, u); assert.equal(cuerpo.plan_id, "P-PLAN1"); assert.match(cuerpo.application_context.return_url, /accion=pago_ok/);
