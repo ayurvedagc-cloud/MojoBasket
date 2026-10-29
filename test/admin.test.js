@@ -179,3 +179,17 @@ test("PayPal: diagnostica credenciales del otro entorno y limpia valores pegados
   process.env.PAYPAL_ENV = "Live"; assert.equal(P.modo(), "live");
   for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_ENV"]) delete process.env[k];
 });
+
+test("lista de ejemplo: solo propias del SuperAdmin y lectura pública", async () => {
+  const jefe = await entra("jefe@ejemplo.com"), u = C.uid("jefe@ejemplo.com");
+  const g = await C_("guardar", { method: "POST", cookie: jefe.cookie, body: { plan: { fecha: "2026-10-29T10:00:00Z", super: "SPAR", recetas: [{ nombre: "Potaje" }], listas: [{ id: "a", total: 40 }] } } });
+  const otro = await entra("zoe@ejemplo.es"), uz = C.uid("zoe@ejemplo.es");
+  const gz = await C_("guardar", { method: "POST", cookie: otro.cookie, body: { plan: { super: "Mercadona" } } });
+  assert.equal((await A("ejemplo_publicar", { method: "POST", cookie: jefe.cookie, body: { uid: uz, id: gz.body.id } })).s, 403, "no se publican listas ajenas");
+  assert.equal((await C_("ejemplo")).body.ok, false);
+  assert.equal((await A("ejemplo_publicar", { method: "POST", cookie: jefe.cookie, body: { uid: u, id: g.body.id } })).s, 200);
+  const e = await C_("ejemplo");
+  assert.equal(e.body.plan.super, "SPAR"); assert.equal(e.body.plan.nubeId, undefined);
+  await A("ejemplo_quitar", { method: "POST", cookie: jefe.cookie, body: {} });
+  assert.equal((await C_("ejemplo")).body.ok, false);
+});

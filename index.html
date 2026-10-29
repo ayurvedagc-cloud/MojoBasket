@@ -221,6 +221,12 @@ details.rec[open] summary .sm{display:none}
 .small{font-size:13.5px;color:var(--muted)}
 .hidden{display:none!important}
 .legal{max-width:560px;margin:-96px auto 0;padding:0 20px 120px;text-align:center;font-size:12.5px;color:var(--muted)}.legal a{color:var(--muted)}
+.ejemplo-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--atl-soft);border-radius:18px;padding:12px 16px;margin:0 0 18px;color:var(--ink)}
+.ejemplo-btn>span:first-child{font-size:24px}.ejemplo-btn>span:nth-child(2){flex:1}.ejemplo-btn b{display:block;color:var(--atl)}.ejemplo-btn small{display:block;color:var(--muted);font-size:13px}.ejemplo-btn>span:last-child{font-size:22px;color:var(--atl);font-weight:700}
+.ejemplo-banda{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border-radius:16px;padding:10px 12px 10px 16px;margin:0 0 14px}
+.ejemplo-banda>div{flex:1}.ejemplo-banda b{display:block}.ejemplo-banda small{display:block;color:var(--muted);font-size:12.5px}.ejemplo-banda button{background:var(--ink);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;white-space:nowrap}
+.rapido{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border-radius:18px;padding:12px 12px 12px 16px;margin:14px 0 0}
+.rapido>div{flex:1}.rapido b{display:block}.rapido small{display:block;color:var(--muted);font-size:13px;line-height:1.35}.rapido button{background:var(--accent);border-radius:14px;padding:12px 16px;font-weight:800;white-space:nowrap}
 .cuenta-pill{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:15;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:700;box-shadow:var(--shadow)}
 .cuenta-pill.on{background:var(--atl);border-color:var(--atl);color:#fff}
 .app.con-pill{padding-top:58px}
@@ -329,7 +335,7 @@ const km = d => d<1?Math.round(d*1000)+" m":String(Math.round(d*10)/10).replace(
 /* ---------- estado ---------- */
 const LS = "quecompro.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(LS)) || null } catch(e){ return null } };
-const save = () => { try { localStorage.setItem(LS, JSON.stringify({profile:S.profile, plan:S.plan, checked:S.checked})) } catch(e){} };
+const save = () => { if(S.ejemplo) return; try { localStorage.setItem(LS, JSON.stringify({profile:S.profile, plan:S.plan, checked:S.checked})) } catch(e){} };
 const saved = load();
 const S = {
 step: 0, view: saved?.plan ? "result" : "wizard", tab:"lista", q:"",
@@ -363,7 +369,7 @@ const imcTxt=i=>i<18.5?"bajo peso":i<25?"normal":i<30?"sobrepeso":"obesidad";
 function comensalesTexto(){
 syncDiners();
 const ls=P.diners.map((d,i)=>{
-const m=metricas(d); if(!m) return `  ${i+1}) datos incompletos`;
+const m=metricas(d); if(!m) return `  ${i+1}) sin datos: adulto con raciones estándar`;
 const act=(ACT.find(x=>x[0]===d.act)||ACT[1])[1].toLowerCase();
 return `  ${i+1}) ${d.sexo==="h"?"Hombre":"Mujer"}, ${d.edad} años, ${d.altura} cm, ${d.peso} kg, IMC ${String(m.imc).replace(".",",")}${m.menor?" (en menores se valora por percentiles de edad, no por cortes adultos)":` (${imcTxt(m.imc)})`}, actividad ${act}${m.kcal?` → gasto estimado ~${m.kcal} kcal/día`:" → menor de edad: usa referencias pediátricas para su edad"}`;
 });
@@ -553,6 +559,7 @@ if(c==="borrarSi"){ try{ await cuentaApi("borrar_cuenta",{}); Object.assign(CUEN
 (async()=>{
 const qs=new URLSearchParams(location.search), est=qs.get("cuenta");
 if(est){ qs.delete("cuenta"); history.replaceState(null,"",location.pathname+(qs.toString()?"?"+qs:"")+location.hash); }
+cargaEjemplo();
 await cuentaYo();
 const MSG={nueva:"¡Cuenta creada! Tus listas se guardarán en la nube.",ok:"Has entrado. Tus listas se guardan en la nube.",caducado:"El enlace ha caducado o no es válido. Pide otro.",usado:"Ese enlace ya se usó. Si no has entrado, pide otro.",bloqueado:"Esta cuenta está suspendida. Escribe a admin@allwaysu.com si crees que es un error.",pro:"¡Ya eres Pro! Gracias por apoyar MojoBasket.",pago_pendiente:"Estamos confirmando tu pago; en unos minutos tendrás Pro.",pago_cancelado:"Pago cancelado. No se te ha cobrado nada."};
 if(est&&MSG[est]){ toast(MSG[est]); if(est==="caducado"||est==="usado"||est==="bloqueado"||est==="pro") abreCuenta(MSG[est]); }
@@ -564,12 +571,19 @@ document.addEventListener("click",e=>{ const a=e.target.closest?.("[data-ev]"); 
 
 /* ---------- render ---------- */
 function render(){
+if(S.ejemplo&&S.view!=="result"){ const pr=ejemploPrevio||{}; S.ejemplo=false; S.plan=pr.plan||null; S.checked=pr.checked||{}; }
 const app=$("#app"), cta=$("#cta"), wrap=$("#ctaWrap");
 wrap.classList.remove("hidden");
 if(S.view==="wizard"){ app.innerHTML = topbar()+stepHTML(); bindStep(); const c=ctaState(); cta.className="cta"; cta.innerHTML=c.label+" ›"; cta.disabled=!c.ok; cta.onclick=next; }
 else if(S.view==="loading"){ app.innerHTML = loadingHTML(); wrap.classList.add("hidden"); }
-else { app.innerHTML = resultHTML(); bindResult(); cta.className="cta dark"; cta.innerHTML="Nueva lista ↻"; cta.disabled=false; cta.onclick=()=>{S.view="wizard";S.step=0;render();scrollTo(0,0)}; }
+else { app.innerHTML = resultHTML(); bindResult(); const se=$("#salirEjemplo"); if(se) se.onclick=salirEjemplo; cta.className="cta dark"; cta.innerHTML=S.ejemplo?"Crear mi lista ›":"Nueva lista ↻"; cta.disabled=false; cta.onclick=S.ejemplo?salirEjemplo:()=>{S.view="wizard";S.step=0;render();scrollTo(0,0)}; }
 }
+/* ---------- lista de ejemplo (elegida desde el panel SuperAdmin) ---------- */
+const EJEMPLO={ok:false,plan:null};
+async function cargaEjemplo(){ if(!STANDALONE) return; try{ const r=await fetch("/api/cuenta?accion=ejemplo"); const j=await r.json(); if(j.ok&&j.plan){ EJEMPLO.ok=true; EJEMPLO.plan=j.plan; if(S.view==="wizard"&&S.step===0) render(); } }catch(e){} }
+let ejemploPrevio=null;
+function abreEjemplo(){ if(!EJEMPLO.plan) return; ejemploPrevio={plan:S.plan,checked:S.checked,tab:S.tab,view:S.view,step:S.step}; S.ejemplo=true; S.plan=JSON.parse(JSON.stringify(EJEMPLO.plan)); S.checked={}; S.tab="menu"; S.view="result"; render(); scrollTo(0,0); ev("clic",{accion:"ejemplo"}); }
+function salirEjemplo(){ const pr=ejemploPrevio||{}; S.ejemplo=false; S.plan=pr.plan||null; S.checked=pr.checked||{}; S.tab=pr.tab||"lista"; S.view="wizard"; S.step=0; render(); scrollTo(0,0); }
 function topbar(){
 const n=STEPS.length;
 return `<div class="topbar"><button class="back" id="back" ${S.step===0&&!S.plan?"disabled":""} aria-label="Atrás">‹</button>
@@ -596,7 +610,7 @@ const filas=ordenadas.map(t=>{ const sel=P.supers.includes(t.c); return `<div cl
 <button class="add${sel?" on":""}" data-cadena="${esc(t.c)}" aria-label="${sel?"Quitar":"Añadir"} ${esc((SUPERS.find(x=>x.id===t.c)||{}).n||t.c)}">${sel?"✓":"+"}</button></div>`; }).join("");
 const cerca=Object.fromEntries(SUPERS.map(x=>{ const t=ordenadas.find(t=>t.c===x.id); return [x.id,t]; }));
 const tiles=SUPERS.map(x=>{ const t=cerca[x.id]; const sub=t?`${x.api||x.lidlplus?"✓ precios reales":"≈ estimado"} · ${esc(t.n.replace(/^(Mercadona|HiperDino|SuperDino|EUROSPAR|SPAR|Lidl|ALDI|Gordillo)\s*/,""))} a ${km(t.km)}`:(x.s||"≈ estimado · sin tienda en el mapa"); return tile(x.id,"",x.n,sub,P.supers.includes(x.id)); }).join("");
-return `<div class="eyebrow">Tu súper · CP 35100</div><h1>¿Dónde haces <em class="it">la compra?</em></h1>
+return `${EJEMPLO.ok?`<button class="ejemplo-btn" id="verEjemplo"><span>👀</span><span><b>Mira un ejemplo antes de empezar</b><small>Una lista real con menú, recetas y precios</small></span><span aria-hidden="true">›</span></button>`:""}<div class="eyebrow">Tu súper · CP 35100</div><h1>¿Dónde haces <em class="it">la compra?</em></h1>
 <p class="sub">Elige tu zona o toca el mapa para marcar dónde estás, y después las cadenas que quieres comparar (hasta ${MAX_SUPERS}). Distancias en línea recta.</p>
 <div class="chips" style="gap:8px">${STANDALONE&&navigator.geolocation?`<button class="chip${u.label==="Mi ubicación"?" sel":""}" style="padding:8px 14px;font-size:15px" id="gps">📍 Mi ubicación</button>`:""}${ZONAS.map(z=>`<button class="chip${u.label===z[1]?" sel":""}" style="padding:8px 14px;font-size:15px" data-zona="${z[0]}">${esc(z[1])}</button>`).join("")}</div>
 <div class="mapa"><svg id="mapa" viewBox="0 0 ${MAPA.w} ${MAPA.h}" role="img" aria-label="Mapa esquemático de supermercados en Maspalomas">
@@ -623,8 +637,9 @@ return `<div class="eyebrow">Presupuesto semanal</div><h1>Fija tu <em class="it"
 <div class="range-ends"><span>10 €</span><span>200 €</span></div>
 <div class="row-card"><div class="ic">👥</div><div class="tx"><b>Cocinas para</b><small>${P.people===1?"Solo":P.people+" personas"}</small></div>
 <div class="stepper"><button id="pm">−</button><span>${P.people}</span><button id="pp">+</button></div></div>
+<div class="rapido"><div><b>⚡ ¿Con prisa?</b><small>Crea tu lista ya con tu súper y tu presupuesto; el resto, con las opciones por defecto. Puedes afinarla después.</small></div><button id="rapido">Crear ya</button></div>
 <div class="section-label" style="margin-top:22px">${P.people===1?"Sobre ti":"Los comensales"}</div>
-<p class="small" style="margin:0 0 4px">Ajusta raciones, calorías y proteína de cada persona. Se guarda solo en este dispositivo.</p>
+<p class="small" style="margin:0 0 4px">Opcional si usas «Crear ya». Ajusta raciones, calorías y proteína de cada persona. Se guarda solo en este dispositivo.</p>
 ${(syncDiners(),P.diners).map((d,i)=>dinerHTML(d,i)).join("")}`; }
 if(s==="days") return `<div class="eyebrow">Días y comidas</div><h1>¿Qué días <em class="it">cocinas?</em></h1>
 <p class="sub">Toca los días y las comidas que quieres planificadas.</p>
@@ -701,6 +716,7 @@ else generate();
 }
 function bindStep(){
 const back=$("#back"); if(back) back.onclick=()=>{ if(S.step>0){S.step--;render();scrollTo(0,0)} else if(S.plan){S.view="result";render()} };
+const vej=$("#verEjemplo"); if(vej) vej.onclick=abreEjemplo;
 document.querySelectorAll("[data-k]").forEach(box=>{
 const k=box.dataset.k;
 box.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{
@@ -720,6 +736,7 @@ const det=$("#tiendas"); if(det) det.ontoggle=()=>{ S.verTiendas=det.open; };
 const mp=$("#mapa"); if(mp) mp.onclick=e=>{ if(e.target.closest("a")) return; const r=mp.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*MAPA.w, y=(e.clientY-r.top)/r.height*MAPA.h;
 P.pos={lat:MAPA.lat1-y/MAPA.h*(MAPA.lat1-MAPA.lat0),lng:MAPA.lng0+x/MAPA.w*(MAPA.lng1-MAPA.lng0),label:"Punto marcado"}; save(); const sy=scrollY; render(); scrollTo(0,sy); toast("Posición marcada"); };
 document.querySelectorAll("[data-cadena]").forEach(b=>b.onclick=()=>{ const v=b.dataset.cadena; if(P.supers.includes(v)) toggle(P.supers,v); else if(P.supers.length<MAX_SUPERS) P.supers.push(v); else { toast(`Máximo ${MAX_SUPERS} súpers`); return; } P.super=P.supers[0]||null; save(); const y=scrollY; render(); scrollTo(0,y); });
+const rap=$("#rapido"); if(rap) rap.onclick=()=>{ S.rapido=true; save(); generate(); };
 const rng=$("#rng"); if(rng) rng.oninput=e=>{ P.budget=+e.target.value; $(".big").innerHTML=P.budget+"<sup>€</sup>"; rng.style.setProperty("--p",((P.budget-10)/190*100)+"%"); save(); };
 const pm=$("#pm"),pp=$("#pp"); if(pm){ pm.onclick=()=>{P.people=Math.max(1,P.people-1);syncDiners();save();render()}; pp.onclick=()=>{P.people=Math.min(12,P.people+1);syncDiners();save();render()}; }
 document.querySelectorAll("[data-sexo],[data-act]").forEach(b=>b.onclick=()=>{ const d=P.diners[+b.dataset.d]; if(b.dataset.sexo) d.sexo=b.dataset.sexo; else d.act=b.dataset.act; save(); const y=scrollY; render(); scrollTo(0,y); });
@@ -1229,7 +1246,7 @@ const p=S.plan, L=listaActiva(), ls=planListas(), t=totals(L), over=t.total>p.bu
 const d=new Date(p.fecha||Date.now());
 const tabs=[["lista","🛒 Lista"],["pedido","🛍️ Pedir"],...(p.comparativa?[["comparar","⚖️ Comparar"]]:[]),["menu","📅 Menú"],["recetas","🍳 Recetas"]];
 if(S.tab==="comparar"&&!p.comparativa) S.tab="lista";
-return `<div class="res-head"><div><div class="eyebrow">${esc(p.super||superName())} · ${d.toLocaleDateString("es-ES",{day:"numeric",month:"short"})}</div>
+return `${S.ejemplo?`<div class="ejemplo-banda"><div><b>Esto es un ejemplo</b><small>Lista real de ${esc(p.super||"")}. Los precios son de cuando se creó.</small></div><button id="salirEjemplo">Crear la mía</button></div>`:""}<div class="res-head"><div><div class="eyebrow">${esc(p.super||superName())} · ${d.toLocaleDateString("es-ES",{day:"numeric",month:"short"})}</div>
 <h1>Tu <em class="it">semana</em></h1></div>
 <button class="back" id="edit" aria-label="Editar preferencias">⚙︎</button></div>
 <p class="sub" style="margin-bottom:6px">${esc(p.resumen||"")}</p>

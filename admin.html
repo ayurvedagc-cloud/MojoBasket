@@ -222,6 +222,8 @@ async sistema(){
       <h3>Límites</h3><dl class="kv"><dt>Sin cuenta</dt><dd>${j.limites.anonimo.listas} listas/semana</dd><dt>Gratis</dt><dd>${j.limites.gratis.listas} listas/semana · historial ${j.limites.gratis.historial}</dd><dt>Pro</dt><dd>ilimitadas · historial ${j.limites.pro.historial}</dd></dl></div>
     <div class="card"><h3 style="margin-top:0">Variables de entorno</h3>${Object.entries(v).map(([k,ok])=>`<div class="check"><i>${ok?"✅":opc.has(k)?"▫️":"❌"}</i><code>${esc(k)}</code>${!ok&&opc.has(k)?`<span class="muted small">opcional</span>`:""}</div>`).join("")}<p class="small muted">Solo se muestra si existen, nunca su valor.</p></div>
   </div>
+  <div class="card"><div class="row"><h3 class="grow" style="margin:0">Lista de ejemplo en la app</h3>${j.ejemplo?`<button class="btn r" data-a="quitarEjemplo">Quitar</button>`:""}</div>
+    <p class="small muted" style="margin:8px 0 0">${j.ejemplo?`Publicada el ${fecha(j.ejemplo.t)}${j.ejemplo.super?` · ${esc(j.ejemplo.super)}`:""}. Se muestra en el primer paso como «Mira un ejemplo antes de empezar».`:"Sin publicar. Abre tu ficha en Usuarios, pulsa «Ver» en una de tus listas y «Publicar como ejemplo»."}</p></div>
   <div class="card"><div class="row"><h3 class="grow" style="margin:0">Alertas diarias</h3><button class="btn" data-a="alertas">Comprobar y enviar ahora</button></div>
     <p class="small muted" style="margin:8px 0 0">Cada día a las ${esc(j.alertas.hora)} se comprueba el recolector, el uso y coste de Claude, los pagos y la configuración. Se envía email a ${esc(j.alertas.destinatarios)} solo si hay avisos, y los lunes con el resumen semanal.${j.alertas.ultima?` Última comprobación: ${fecha(j.alertas.ultima.t)} · ${j.alertas.ultima.avisos.length} avisos.`:""}</p><div id="alertasRes" class="small" style="margin-top:8px"></div></div>
   <div class="card"><div class="row"><h3 class="grow" style="margin:0">Email (Resend)</h3><button class="btn" data-a="email">Enviarme un email de prueba</button></div></div>
@@ -276,11 +278,12 @@ async function ficha(uid){
   </div>`;
   d.dataset.uid=u.uid; d.dataset.email=u.email;
 }
-function resumenLista(p){
+function resumenLista(p,idPropio){
   const recetas=(p.recetas||[]).map(r=>r.nombre||r.titulo).filter(Boolean), L=p.listas||[];
   return `<div class="card" style="background:var(--bg);margin-top:10px"><b>${esc(p.super||(p.superIds||[]).join(" + ")||"Lista")}</b> <span class="small muted">${fecha(p.fecha)}</span>
   ${recetas.length?`<p class="small" style="margin:6px 0"><b>Recetas:</b> ${esc(recetas.join(" · "))}</p>`:""}
   ${L.map(l=>`<p class="small" style="margin:4px 0">Lista <b>${esc(l.nombre||l.id||"")}</b>${l.total!=null?` · ${(+l.total).toLocaleString("es-ES",{style:"currency",currency:"EUR"})}`:""}${Array.isArray(l.items)?` · ${l.items.length} productos`:""}</p>`).join("")}
+  ${idPropio?`<div class="row" style="margin:8px 0"><button class="btn p" data-a="publicarEjemplo" data-id="${esc(idPropio)}">Publicar como ejemplo en la app</button></div>`:""}
   <details><summary class="small">Ver JSON completo</summary><pre>${esc(JSON.stringify(p,null,1))}</pre></details></div>`;
 }
 function nuevo(){
@@ -299,6 +302,8 @@ document.addEventListener("click",async(e)=>{
   try{
     if(a==="cerrar"){ d.close(); if(ST.tab==="usuarios"||ST.tab==="resumen") pinta(); return; }
     if(a==="plan"){ await hazlo("usuario_plan",{uid,plan:b.dataset.plan,dias:+($("#proDias")?.value||0)},"Plan cambiado"); return ficha(uid); }
+    if(a==="publicarEjemplo"){ if(!confirm("¿Mostrar esta lista como ejemplo público en la app? La verá cualquiera, sin registrarse.")) return; await hazlo("ejemplo_publicar",{uid,id:b.dataset.id},"Publicada como ejemplo"); return; }
+    if(a==="quitarEjemplo"){ if(!confirm("¿Quitar la lista de ejemplo de la app?")) return; await hazlo("ejemplo_quitar",{},"Ejemplo retirado"); return pinta("sistema"); }
     if(a==="copiar"){ try{ await navigator.clipboard.writeText(b.dataset.txt); toast("Copiado: "+b.dataset.txt); }catch(err){ prompt("Copia el código:",b.dataset.txt); } return; }
     if(a==="codigoOff"||a==="codigoOn"){ await hazlo("codigo_estado",{id:b.dataset.id,activo:a==="codigoOn"},a==="codigoOn"?"Código activado":"Código desactivado"); return pinta("planes"); }
     if(a==="alertas"){ const box=$("#alertasRes"); b.disabled=true; box.textContent="Comprobando…"; try{ const r=await api("alertas_probar",{},{}); box.innerHTML=(r.avisos.length?r.avisos.map(x=>`<div class="check"><i>${x.nivel==="alto"?"🔴":"🟡"}</i>${esc(x.texto)}</div>`).join(""):`<div class="check"><i>✅</i>Sin avisos</div>`)+`<p class="small muted">${r.enviado?"Email enviado a "+esc(r.destinatarios.join(", ")):"No se envió el email"+(r.error?": "+esc(r.error):"")}</p>`; }catch(err){ box.textContent="Error: "+err.message; } finally{ b.disabled=false; } return; }
@@ -308,7 +313,7 @@ document.addEventListener("click",async(e)=>{
     if(a==="desbloquear"){ await hazlo("usuario_bloquear",{uid,bloqueado:false},"Cuenta reactivada"); return ficha(uid); }
     if(a==="nota"){ await hazlo("usuario_nota",{uid,nota:$("#nota").value},"Nota guardada"); return; }
     if(a==="borrar"){ if(!confirm("¿Borrar definitivamente la cuenta y su historial?")) return; await hazlo("usuario_borrar",{uid,confirma:$("#bConf").value,motivo:$("#bMotivo").value},"Cuenta borrada"); d.close(); return pinta(); }
-    if(a==="verLista"){ const j=await api("lista",{uid,id:b.dataset.id}); $("#verLista").innerHTML=resumenLista(j.plan); $("#verLista").scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+    if(a==="verLista"){ const j=await api("lista",{uid,id:b.dataset.id}); $("#verLista").innerHTML=resumenLista(j.plan,d.dataset.uid===ST.yoUid?b.dataset.id:null); $("#verLista").scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
     if(a==="nuevo") return nuevo();
     if(a==="csv"){ const rows=[["email","plan","admin","suspendido","creado","ultimo","listas","cuota_semana"],...(ST.usuarios||[]).map(u=>[u.email,u.plan,u.admin,u.bloqueado,u.creado,u.ultimo,u.listas,u.cuota.usadas])];
       const blob=new Blob(["﻿"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(";")).join("\n")],{type:"text/csv"}); const l=document.createElement("a"); l.href=URL.createObjectURL(blob); l.download="mojobasket-usuarios.csv"; l.click(); return; }
@@ -341,7 +346,7 @@ document.addEventListener("submit",async(e)=>{
       f.outerHTML=`<p><b>Enlace enviado.</b> Ábrelo en este navegador: volverás directamente al panel.</p>`; }catch(err){ toast("⚠️ "+err.message); btn.disabled=false; } }
 });
 (async()=>{
-  try{ const j=await api("resumen"); ST.pre=j; $("#who").textContent=j.yo; $("#tabs").classList.remove("hidden"); ST.tab=(location.hash.slice(1)in VISTAS)?location.hash.slice(1):"resumen"; pinta(); }
+  try{ const j=await api("resumen"); ST.pre=j; ST.yoUid=j.yo_uid||null; $("#who").textContent=j.yo; $("#tabs").classList.remove("hidden"); ST.tab=(location.hash.slice(1)in VISTAS)?location.hash.slice(1):"resumen"; pinta(); }
   catch(e){ if(e.status===401||e.status===403) acceso(e); else $("#main").innerHTML=`<div class="card">Error: ${esc(e.message)}</div>`; }
 })();
 window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(h in VISTAS) pinta(h); });
