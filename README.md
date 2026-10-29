@@ -27,6 +27,10 @@ Menú semanal, recetas y lista de la compra con precios reales de los supermerca
 | `PAYPAL_PRECIO_TEXTO` | Opcional: precio que se muestra en el botón (p. ej. «2,99 €/mes») |
 | `ALERTAS_EMAIL` / `ALERTA_COSTE_DIA` | Opcional: destinatarios de las alertas (por defecto los SuperAdmin) y umbral de coste diario de Claude en USD (10) |
 
+## Zonas
+Maspalomas (CP 35100), Las Palmas de GC (35010) y Telde (35200): tiendas reales (Google Maps), barrios y mapa por zona en `index.html` (`AREAS`).
+SPAR e HiperDino usan el catálogo de toda Gran Canaria (instantánea de `CP_DEFECTO`); Mercadona reutiliza esa instantánea si el almacén del CP es el mismo y, si no, el cron recolecta el del CP (crons `cadena=mercadona&cp=35010|35200`); Lidl Plus elige la tienda del CP.
+
 ## Panel SuperAdmin (`/admin`)
 Acceso solo con sesión de un email de `SUPERADMIN_EMAILS` (comprobado en el servidor, `lib/admin.js`, servido por `api/app.js` → `/api/admin`).
 - **Resumen**: usuarios, activos y nuevos 7 días, Pro, suspendidos, listas generadas 14 días, Claude hoy (llamadas, tope, coste estimado).

@@ -221,6 +221,9 @@ details.rec[open] summary .sm{display:none}
 .small{font-size:13.5px;color:var(--muted)}
 .hidden{display:none!important}
 .legal{max-width:560px;margin:-96px auto 0;padding:0 20px 120px;text-align:center;font-size:12.5px;color:var(--muted)}.legal a{color:var(--muted)}
+.areas{display:flex;gap:4px;background:var(--card);border-radius:16px;padding:4px;margin:0 0 12px;box-shadow:var(--shadow)}
+.areas button{flex:1;border-radius:12px;padding:10px 6px;font-weight:700;font-size:14.5px;color:var(--muted);line-height:1.2}
+.areas button.on{background:var(--atl);color:#fff}
 .ejemplo-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--atl-soft);border-radius:18px;padding:12px 16px;margin:0 0 18px;color:var(--ink)}
 .ejemplo-btn>span:first-child{font-size:24px}.ejemplo-btn>span:nth-child(2){flex:1}.ejemplo-btn b{display:block;color:var(--atl)}.ejemplo-btn small{display:block;color:var(--muted);font-size:13px}.ejemplo-btn>span:last-child{font-size:22px;color:var(--atl);font-weight:700}
 .ejemplo-banda{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border-radius:16px;padding:10px 12px 10px 16px;margin:0 0 14px}
@@ -295,7 +298,7 @@ const STEPS = ["super","budget","days","goals","kitchen","diet","dislikes","offe
 
 
 /* ---------- tiendas de la zona (CP 35100, fuente: Google Maps, 26/10/2026) ---------- */
-const TIENDAS = [
+const TIENDAS_35100 = [
 {c:"mercadona",n:"Mercadona San Fernando",d:"C. Partera Leonorita, 3",lat:27.7664048,lng:-15.5744019,real:1,dom:0,pid:"ChIJP86tNKViPwwRkHhqnYS8yCg"},
 {c:"mercadona",n:"Mercadona Meloneras",d:"C. Mar de Azor, s/n",lat:27.7513905,lng:-15.6088297,real:1,dom:0,pid:"ChIJuSs7WTh9PwwRSi6i8zv0_Ns"},
 {c:"mercadona",n:"Mercadona El Tablero",d:"Av. de las Américas, s/n",lat:27.7705086,lng:-15.6059981,real:1,dom:0,pid:"ChIJ_5vnyVZ9PwwR8ONL8LCxQaA"},
@@ -321,10 +324,64 @@ const TIENDAS = [
 {c:"gordillo",n:"Gordillo Campo Internacional",d:"Campo Internacional",lat:27.7457995,lng:-15.612212,real:0,dom:1,pid:"ChIJ2c9DCzx9PwwRBHZ1WOIoG-0"},
 ];
 // [id, nombre, lat, lng, latEtiqueta, lngEtiqueta, anclaje]
-const ZONAS = [["sanfernando","San Fernando",27.7655,-15.5775,27.7695,-15.5885,"end"],["playaingles","Playa del Inglés",27.7575,-15.5715,27.7505,-15.5665,"middle"],["sonnenland","Sonnenland",27.7625,-15.6015,27.7625,-15.6075,"end"],["tablero","El Tablero",27.769,-15.6045,27.7685,-15.6105,"end"],["meloneras","Meloneras",27.7395,-15.6015,27.7435,-15.6035,"middle"],["campoint","Campo Internacional",27.7475,-15.6075,27.7495,-15.6165,"start"]];
+const ZONAS_35100 = [["sanfernando","San Fernando",27.7655,-15.5775,27.7695,-15.5885,"end"],["playaingles","Playa del Inglés",27.7575,-15.5715,27.7505,-15.5665,"middle"],["sonnenland","Sonnenland",27.7625,-15.6015,27.7625,-15.6075,"end"],["tablero","El Tablero",27.769,-15.6045,27.7685,-15.6105,"end"],["meloneras","Meloneras",27.7395,-15.6015,27.7435,-15.6035,"middle"],["campoint","Campo Internacional",27.7475,-15.6075,27.7495,-15.6165,"start"]];
 const COLOR_CADENA = {mercadona:"#0a5e8c",hiperdino:"#a9442a",spar:"#3f6a2b",lidl:"#ffc72c",aldi:"#5e5547",gordillo:"#1f1d1b",bio:"#7a5c8a"};
 // Proyección equirrectangular del CP 35100 sobre un lienzo de 560×420
-const MAPA = {lng0:-15.619,lng1:-15.556,lat0:27.731,lat1:27.779,w:560,h:420};
+const MAPA_35100 = {lng0:-15.619,lng1:-15.556,lat0:27.731,lat1:27.779,w:560,h:420};
+const TIENDAS_35010 = [
+{c:"mercadona",n:"Mercadona República Dominicana",d:"C. República Dominicana, s/n",lat:28.132707,lng:-15.439168,real:1,dom:0,pid:"ChIJyXf2X_6UQAwRVci2U3IfhkI"},
+{c:"mercadona",n:"Mercadona Pintor Felo Monzón",d:"Av. Pintor Felo Monzón (C.C.)",lat:28.098057,lng:-15.455633,real:1,dom:0,pid:"ChIJMbQxlUyUQAwRN8iS3Ulyp0A"},
+{c:"mercadona",n:"Mercadona Bernardino Correa",d:"C. Bernardino Correa Viera, 8",lat:28.101022,lng:-15.419143,real:1,dom:0,pid:"ChIJ_y8Y-pGVQAwRsRCDGmk-7Bc"},
+{c:"mercadona",n:"Mercadona C. Galicia",d:"C. Galicia, 24",lat:28.133445,lng:-15.432713,real:1,dom:0,pid:"ChIJrRfDvbyVQAwRMb8pVckY6RY"},
+{c:"mercadona",n:"Mercadona Flick",d:"C. Gustavo J Navarro Nieto, 15",lat:28.110628,lng:-15.440439,real:1,dom:0,pid:"ChIJfS5CeiOVQAwR-xW7nJ68Ux8"},
+{c:"hiperdino",n:"HiperDino Miller",d:"C. Luis Correa Medina, 9",lat:28.102805,lng:-15.435206,real:1,dom:0,pid:"ChIJ831jvbyVQAwRCMuO6wW_98Y"},
+{c:"hiperdino",n:"HiperDino Triana",d:"C. Munguía, 7",lat:28.10652,lng:-15.415502,real:1,dom:1,pid:"ChIJ45l-fo-VQAwR_nhKyZsK2fI"},
+{c:"hiperdino",n:"HiperDino Luis Doreste",d:"C. Luis Doreste Silva, 46",lat:28.118491,lng:-15.422993,real:1,dom:0,pid:"ChIJHz9tbXaVQAwRHbHrywM2z9A"},
+{c:"hiperdino",n:"HiperDino El Muelle",d:"Muelle de Sta. Catalina, s/n",lat:28.14205,lng:-15.427278,real:1,dom:1,pid:"ChIJAQAAAFGVQAwR6MsVys6SWW4"},
+{c:"hiperdino",n:"SuperDino Sagasta",d:"C. Sagasta, 100",lat:28.148081,lng:-15.429849,real:0,dom:1,pid:"ChIJv0xpgUeVQAwRtZRfLPxWwR4"},
+{c:"spar",n:"SPAR Express Las Torres",d:"C. Ayagaures, 3",lat:28.110499,lng:-15.457846,real:0,dom:1,pid:"ChIJmdLO9W2VQAwRdgsoQP8rqfU"},
+{c:"spar",n:"SPAR Bravo Murillo",d:"C. Bravo Murillo, 3",lat:28.108596,lng:-15.418238,real:0,dom:2,pid:"ChIJczTKLYWVQAwRWG4hxEPZ3BU"},
+{c:"spar",n:"SPAR Ciudad Jardín",d:"Calle Dr. José Juan Megías, 7",lat:28.126344,lng:-15.429137,real:0,dom:1,pid:"ChIJiR8oyumVQAwRkHtk5VMxOec"},
+{c:"spar",n:"SPAR Tres Palmas",d:"Urb. Tres Palmas, bloque 11",lat:28.069706,lng:-15.423111,real:0,dom:0,pid:"ChIJVVVVVQiWQAwRRIKwYStlUrw"},
+{c:"spar",n:"SPAR Las Canteras",d:"C. Bernardo de la Torre, 88",lat:28.139949,lng:-15.434598,real:0,dom:1,pid:"ChIJ1e3fPz6VQAwRnRaudwi_L6I"},
+{c:"lidl",n:"Lidl Juan Carlos I",d:"Av. Juan Carlos I",lat:28.11851,lng:-15.44587,real:1,dom:0,pid:"ChIJbwlH8QaVQAwRpAPV1AiSF1k"},
+{c:"lidl",n:"Lidl Ctra. del Norte",d:"Ctra. del Norte, 163",lat:28.099635,lng:-15.443101,real:1,dom:0,pid:"ChIJ98W-09yVQAwRw_xliqBIUnA"},
+{c:"lidl",n:"Lidl Hnos. Domínguez Santana",d:"C. Hermanos Domínguez Santana, s/n",lat:28.095071,lng:-15.477823,real:1,dom:0,pid:"ChIJLWJjb8-VQAwRQg2ige2sz3A"},
+{c:"aldi",n:"ALDI Ctra. del Norte",d:"Ctra. del Norte, 157",lat:28.099906,lng:-15.44226,real:0,dom:0,pid:"ChIJyXxlMwGVQAwRI0AHig1BB4E"}
+];
+const ZONAS_35010 = [["triana","Triana · Vegueta",28.104,-15.416,28.1085,-15.416,"middle"],["ciudadjardin","Ciudad Jardín",28.124,-15.427,28.1285,-15.427,"middle"],["mesaylopez","Mesa y López",28.131,-15.434,28.1355,-15.434,"middle"],["canteras","Las Canteras",28.14,-15.436,28.1445,-15.436,"middle"],["escaleritas","Escaleritas",28.11,-15.438,28.1145,-15.438,"middle"],["sietepalmas","Siete Palmas",28.099,-15.455,28.1035,-15.455,"middle"],["tamaraceite","Tamaraceite",28.095,-15.477,28.0995,-15.477,"middle"]];
+const TIENDAS_35200 = [
+{c:"mercadona",n:"Mercadona Labrador",d:"C. Labrador, s/n",lat:27.981403,lng:-15.385809,real:1,dom:0,pid:"ChIJ00Us-XaUQAwRfxtQfiJJm6Q"},
+{c:"mercadona",n:"Mercadona Alfonso de Armas",d:"C. Alfonso de Armas Ayala Profesor, 12",lat:27.995805,lng:-15.411441,real:1,dom:0,pid:"ChIJncYEdOOXQAwRpGguztEcoJ8"},
+{c:"mercadona",n:"Mercadona Secundino Delgado",d:"C. Secundino Delgado, 32",lat:27.991854,lng:-15.423254,real:1,dom:0,pid:"ChIJZR0c1O-XQAwRv_hY1RDssPo"},
+{c:"mercadona",n:"Mercadona Melenara",d:"C. Ignacio Ellacuría Beascoechea, 2",lat:27.995548,lng:-15.391296,real:1,dom:0,pid:"ChIJmbR8G1S9QAwR7_JnNGv0aLA"},
+{c:"mercadona",n:"Mercadona C.C. Las Terrazas",d:"GC-1, km 5,5 (C.C. Las Terrazas)",lat:28.028581,lng:-15.395185,real:1,dom:0,pid:"ChIJIaYImti9QAwRYCsmYEzXfoE"},
+{c:"hiperdino",n:"SuperDino Telde",d:"C. Santiago Ascanio Montemayor, 2",lat:27.995681,lng:-15.414914,real:0,dom:0,pid:"ChIJ2ahY5NSXQAwROR1FZnbBBtI"},
+{c:"hiperdino",n:"HiperDino Melenara",d:"GC-1, km 5 (Melenara)",lat:28.00416,lng:-15.392066,real:1,dom:0,pid:"ChIJ_91nTpCXQAwRwVg5nIdjWWg"},
+{c:"hiperdino",n:"HiperDino Arnao",d:"Av. Inspectora Farmacéutica Mª del C. Suárez",lat:28.000368,lng:-15.41733,real:1,dom:0,pid:"ChIJn5VCmeWXQAwREfId6shUX9A"},
+{c:"spar",n:"SPAR San Gregorio",d:"C. Alférez José Ascanio, 40",lat:27.993596,lng:-15.420982,real:0,dom:2,pid:"ChIJq7W3tu-XQAwR48nmd52nqo8"},
+{c:"spar",n:"SPAR Poeta Pablo Neruda",d:"C. Poeta Pablo Neruda, 10",lat:27.997973,lng:-15.41394,real:0,dom:2,pid:"ChIJXzroHuSXQAwRogIhR31ePsI"},
+{c:"spar",n:"SPAR La Barranquera",d:"C. Bentejuí, 1 (La Barranquera)",lat:27.990276,lng:-15.420175,real:0,dom:0,pid:"ChIJC_AqQfCXQAwRB2OoBDLa34w"},
+{c:"spar",n:"SPAR San Juan",d:"C. José Arencibia Gil, 8",lat:28.00074,lng:-15.414402,real:0,dom:2,pid:"ChIJCdXP5uaXQAwR-ET60le2zOw"},
+{c:"spar",n:"SPAR Caserones",d:"C. Ebro, 32-34",lat:28.011769,lng:-15.426375,real:0,dom:2,pid:"ChIJu7sXeCGXQAwRO6UHKYUUDss"},
+{c:"lidl",n:"Lidl Arnao",d:"C. Farmacéutica Pino Suárez López, s/n",lat:28.00054,lng:-15.41675,real:1,dom:0,pid:"ChIJ3dWPc3iXQAwRvWY8s8q6OLs"},
+{c:"lidl",n:"Lidl Valle de Jinámar",d:"Av. Joan y Víctor Jara, 10",lat:28.025827,lng:-15.39909,real:1,dom:0,pid:"ChIJm6Tp4Xi9QAwRrT3HbgoaJww"},
+{c:"lidl",n:"Lidl Melenara",d:"C. Ignacio Ellacuría Beascoechea, 3",lat:27.99661,lng:-15.39142,real:1,dom:0,pid:"ChIJt_jCAUK9QAwR2FK19QjWRec"},
+{c:"aldi",n:"ALDI Melenara",d:"Rotonda Concejal Juan Rodríguez Betancourt, 1",lat:27.994379,lng:-15.390782,real:0,dom:0,pid:"ChIJ4e-ZE069QAwRIwcEnCLJaKc"}
+];
+const ZONAS_35200 = [["sangregorio","San Gregorio",27.9936,-15.421,27.9981,-15.421,"middle"],["sanjuan","San Juan",28.0007,-15.4144,28.0052,-15.4144,"middle"],["caserones","Caserones",28.0118,-15.4264,28.0163,-15.4264,"middle"],["melenara","Melenara",27.996,-15.3915,28.0005,-15.3915,"middle"],["jinamar","Valle de Jinámar",28.0258,-15.3991,28.0303,-15.3991,"middle"]];
+/* Áreas: tiendas (Google Maps, 29/10/2026), barrios y mapa. El catálogo de SPAR e HiperDino es de toda Gran Canaria;
+   Mercadona y Lidl Plus se consultan por el CP del área. */
+const AREAS = {
+"35100":{id:"35100",nombre:"Maspalomas",cp:"35100",tiendas:TIENDAS_35100,zonas:ZONAS_35100,mapa:MAPA_35100,costa:true},
+"35010":{id:"35010",nombre:"Las Palmas de GC",cp:"35010",tiendas:TIENDAS_35010,zonas:ZONAS_35010,mapa:{lng0:-15.5086,lng1:-15.3847,lat0:28.0617,lat1:28.1561,w:560,h:420},cadenas:["mercadona","spar","hiperdino","lidl","aldi","bio"]},
+"35200":{id:"35200",nombre:"Telde",cp:"35200",tiendas:TIENDAS_35200,zonas:ZONAS_35200,mapa:{lng0:-15.4476,lng1:-15.3646,lat0:27.9734,lat1:28.0366,w:560,h:420},cadenas:["mercadona","spar","hiperdino","lidl","aldi","bio"]}
+};
+let AREA, TIENDAS, ZONAS, MAPA, CP;
+function aplicaArea(id){ AREA=AREAS[id]||AREAS["35100"]; TIENDAS=AREA.tiendas; ZONAS=AREA.zonas; MAPA=AREA.mapa; CP=AREA.cp; }
+const superEnArea = x => !AREA.cadenas || AREA.cadenas.includes(x.id);
+aplicaArea("35100");
+
 const mx = lng => (lng-MAPA.lng0)/(MAPA.lng1-MAPA.lng0)*MAPA.w;
 const my = lat => (MAPA.lat1-lat)/(MAPA.lat1-MAPA.lat0)*MAPA.h;
 const kmEntre = (a,b) => { const R=6371, r=Math.PI/180, dLat=(b.lat-a.lat)*r, dLng=(b.lng-a.lng)*r, h=Math.sin(dLat/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
@@ -347,8 +404,9 @@ plan: saved?.plan || null, checked: saved?.checked || {},
 images: [], error:null, progress:0
 };
 const P = S.profile;
+aplicaArea(P.area||"35100");
 if(!Array.isArray(P.supers)||!P.supers.length) P.supers=P.super?[P.super]:[];
-P.supers=P.supers.filter(id=>SUPERS.some(s=>s.id===id)); P.super=P.supers[0]||null;
+P.supers=P.supers.filter(id=>SUPERS.some(s=>s.id===id&&superEnArea(s))); P.super=P.supers[0]||null;
 /* ---------- comensales ---------- */
 const ACT=[["sed","Sedentaria",1.2],["lig","Ligera",1.375],["mod","Moderada",1.55],["alt","Alta",1.725]];
 const nuevoComensal=()=>({sexo:"",edad:"",altura:"",peso:"",act:"lig"});
@@ -395,7 +453,7 @@ const superName = () => selSupers().map(s=>s.n).join(" + ") || "—";
 /* ---------- API de precios reales (vía conector Vercel del usuario) ---------- */
 const STANDALONE = !(window.claude && typeof window.claude.use==="function");
 const API = STANDALONE ? "" : "https://quecompro-precios.vercel.app";
-const CP = "35100"; // Maspalomas · San Bartolomé de Tirajana
+// CP: el del área elegida (aplicaArea)
 const apiCadena = () => selSupers().some(s=>s.api) || null;
 const todasApi = () => selSupers().length>0 && selSupers().every(s=>s.api);
 let mcp = null;
@@ -450,7 +508,7 @@ return {text};
 sampleHTTP.limits=async()=>({images:true});
 /** Métricas anónimas (solo web): sin datos personales ni coordenadas; la zona es el nombre del barrio o «gps/mapa». */
 const ev=(tipo,datos={})=>{ if(!STANDALONE) return; try{ navigator.sendBeacon?.("/api/evento",new Blob([JSON.stringify({tipo,...datos})],{type:"application/json"})); }catch(e){} };
-const zonaEv=()=>{ const l=posUsuario().label; return ZONAS.some(z=>z[1]===l)?l:l==="Mi ubicación"?"gps":"mapa"; };
+const zonaEv=()=>{ const l=posUsuario().label, z=ZONAS.some(x=>x[1]===l)?l:l==="Mi ubicación"?"gps":"mapa"; return AREA.id==="35100"?z:(AREA.nombre+" · "+z).slice(0,40); };
 function evLista(plan){
   const L=(plan.listas||[]).find(l=>l.id===plan.activa)||planListas(plan)[0]; const por={};
   (L.lista||[]).forEach(sec=>(sec.items||[]).forEach(it=>{ if(it.despensa||it.nofound) return; const sid=it.tiendaId||(L.tipo==="mix"?null:(L.id==="u"?(plan.superIds||[])[0]:L.id)); if(!sid) return;
@@ -609,16 +667,17 @@ const filas=ordenadas.map(t=>{ const sel=P.supers.includes(t.c); return `<div cl
 <small>${t.real?`<span class="tag real">✓ precios reales</span>`:`<span class="tag">≈ estimado</span>`} <a class="ext" href="${gmaps(t)}" target="_blank" rel="noopener">Mapa ↗</a></small></div>
 <button class="add${sel?" on":""}" data-cadena="${esc(t.c)}" aria-label="${sel?"Quitar":"Añadir"} ${esc((SUPERS.find(x=>x.id===t.c)||{}).n||t.c)}">${sel?"✓":"+"}</button></div>`; }).join("");
 const cerca=Object.fromEntries(SUPERS.map(x=>{ const t=ordenadas.find(t=>t.c===x.id); return [x.id,t]; }));
-const tiles=SUPERS.map(x=>{ const t=cerca[x.id]; const sub=t?`${x.api||x.lidlplus?"✓ precios reales":"≈ estimado"} · ${esc(t.n.replace(/^(Mercadona|HiperDino|SuperDino|EUROSPAR|SPAR|Lidl|ALDI|Gordillo)\s*/,""))} a ${km(t.km)}`:(x.s||"≈ estimado · sin tienda en el mapa"); return tile(x.id,"",x.n,sub,P.supers.includes(x.id)); }).join("");
-return `${EJEMPLO.ok?`<button class="ejemplo-btn" id="verEjemplo"><span>👀</span><span><b>Mira un ejemplo antes de empezar</b><small>Una lista real con menú, recetas y precios</small></span><span aria-hidden="true">›</span></button>`:""}<div class="eyebrow">Tu súper · CP 35100</div><h1>¿Dónde haces <em class="it">la compra?</em></h1>
+const tiles=SUPERS.filter(superEnArea).map(x=>{ const t=cerca[x.id]; const sub=t?`${x.api||x.lidlplus?"✓ precios reales":"≈ estimado"} · ${esc(t.n.replace(/^(Mercadona|HiperDino|SuperDino|EUROSPAR|SPAR|Lidl|ALDI|Gordillo)\s*/,""))} a ${km(t.km)}`:(x.s||"≈ estimado · sin tienda en el mapa"); return tile(x.id,"",x.n,sub,P.supers.includes(x.id)); }).join("");
+return `${EJEMPLO.ok?`<button class="ejemplo-btn" id="verEjemplo"><span>👀</span><span><b>Mira un ejemplo antes de empezar</b><small>Una lista real con menú, recetas y precios</small></span><span aria-hidden="true">›</span></button>`:""}<div class="eyebrow">Tu súper · ${esc(AREA.nombre)} · CP ${CP}</div><h1>¿Dónde haces <em class="it">la compra?</em></h1>
 <p class="sub">Elige tu zona o toca el mapa para marcar dónde estás, y después las cadenas que quieres comparar (hasta ${MAX_SUPERS}). Distancias en línea recta.</p>
+<div class="areas" role="group" aria-label="Zona de Gran Canaria">${["35100","35010","35200"].map(k=>AREAS[k]).map(a=>`<button class="${a.id===AREA.id?"on":""}" data-area="${a.id}" aria-pressed="${a.id===AREA.id}">${esc(a.nombre)}</button>`).join("")}</div>
 <div class="chips" style="gap:8px">${STANDALONE&&navigator.geolocation?`<button class="chip${u.label==="Mi ubicación"?" sel":""}" style="padding:8px 14px;font-size:15px" id="gps">📍 Mi ubicación</button>`:""}${ZONAS.map(z=>`<button class="chip${u.label===z[1]?" sel":""}" style="padding:8px 14px;font-size:15px" data-zona="${z[0]}">${esc(z[1])}</button>`).join("")}</div>
-<div class="mapa"><svg id="mapa" viewBox="0 0 ${MAPA.w} ${MAPA.h}" role="img" aria-label="Mapa esquemático de supermercados en Maspalomas">
+<div class="mapa"><svg id="mapa" viewBox="0 0 ${MAPA.w} ${MAPA.h}" role="img" aria-label="Mapa esquemático de supermercados en ${esc(AREA.nombre)}">
 <rect width="${MAPA.w}" height="${MAPA.h}" fill="#efe2c8"></rect>
-<path d="${costa}" fill="#cfe3ee"></path>
+${AREA.costa?`<path d="${costa}" fill="#cfe3ee"></path>
 <path d="${dunas}" fill="#ffe9a8" opacity=".9"></path><text x="${mx(-15.586).toFixed(0)}" y="${my(27.7455).toFixed(0)}" text-anchor="middle" font-size="10" font-style="italic" fill="#7a6a4e">Dunas</text>
 <path d="${gc1}" fill="none" stroke="#fffcf5" stroke-width="5"></path><path d="${gc1}" fill="none" stroke="#c9b88f" stroke-width="2" stroke-dasharray="6 5"></path><text x="${mx(-15.6).toFixed(0)}" y="${(my(27.7745)-8).toFixed(0)}" font-size="10" font-weight="700" fill="#7a6a4e">GC-1</text>
-<text x="${(MAPA.w/2).toFixed(0)}" y="${(MAPA.h-14).toFixed(0)}" text-anchor="middle" font-size="12" font-style="italic" fill="#5e5547">Océano Atlántico</text>
+<text x="${(MAPA.w/2).toFixed(0)}" y="${(MAPA.h-14).toFixed(0)}" text-anchor="middle" font-size="12" font-style="italic" fill="#5e5547">Océano Atlántico</text>`:`<text x="${(MAPA.w-12).toFixed(0)}" y="${(MAPA.h-12).toFixed(0)}" text-anchor="end" font-size="11" font-style="italic" fill="#7a6a4e">Esquema · posiciones reales de las tiendas</text>`}
 ${zonasSvg}${marcas}${yo}
 </svg></div>
 <div class="leyenda">${leyenda}<span class="ley"><i style="background:#fffcf5;border:3px solid #0a5e8c"></i>Tú</span><span class="ley"><i style="background:#0a5e8c;border:3px solid #fffcf5"></i>grande = precios reales</span></div>
@@ -670,7 +729,7 @@ return `<div class="eyebrow">Lo que no te gusta</div><h1>¿Algo que no <em class
 <div class="search">🔍<input id="q" placeholder="Busca o escribe un ingrediente" value="${esc(S.q)}" autocomplete="off"></div>
 <div class="chips" data-k="dislikes">${canAdd?`<button class="chip neg" id="addc">➕ Añadir “${esc(S.q.trim())}”</button>`:""}${list.map(x=>chip(x,"",x,P.dislikes.includes(x),true)).join("")}</div>`; }
 if(s==="offers" && todasApi()) return `<div class="eyebrow">Ofertas de la semana</div><h1>Precios <em class="it">reales</em></h1>
-<p class="sub">Para ${esc(superName())} uso el catálogo y las ofertas reales de hoy (CP ${CP}, Maspalomas): el menú se construye sobre lo rebajado y la lista sale con productos y precios exactos.</p>
+<p class="sub">Para ${esc(superName())} uso el catálogo y las ofertas reales de hoy (CP ${CP}, ${esc(AREA.nombre)}): el menú se construye sobre lo rebajado y la lista sale con productos y precios exactos.</p>
 <div class="card"><b>✓ Catálogo actualizado a diario</b><div class="small" style="margin-top:4px">${STANDALONE?"Se consultan cada día en la tienda online de cada cadena.":"Se leen a través de tu conector de Vercel; la primera vez se pedirá permiso."}</div></div>
 ${summaryCard()}
 ${!sample&&!STANDALONE?`<div class="err">La generación necesita permiso para consultar a Claude. Ábrelo desde claude.ai; al pulsar “Crear” se pedirá consentimiento.</div>`:""}`;
@@ -728,9 +787,10 @@ else toggle(P[k],v);
 save(); const y=scrollY; render(); scrollTo(0,y);
 });
 });
+document.querySelectorAll("[data-area]").forEach(b=>b.onclick=()=>{ if(b.dataset.area===AREA.id) return; P.area=b.dataset.area; aplicaArea(P.area); P.pos=null; P.supers=P.supers.filter(id=>superEnArea({id})); P.super=P.supers[0]||null; save(); const y=scrollY; render(); scrollTo(0,y); ev("clic",{accion:"area_"+AREA.id}); });
 document.querySelectorAll("[data-zona]").forEach(b=>b.onclick=()=>{ const z=ZONAS.find(x=>x[0]===b.dataset.zona); P.pos={lat:z[2],lng:z[3],label:z[1]}; save(); const y=scrollY; render(); scrollTo(0,y); });
 const gps=$("#gps"); if(gps) gps.onclick=()=>{ toast("Buscando tu ubicación…"); navigator.geolocation.getCurrentPosition(p=>{ const {latitude:lat,longitude:lng}=p.coords;
-if(lat<MAPA.lat0-0.05||lat>MAPA.lat1+0.05||lng<MAPA.lng0-0.05||lng>MAPA.lng1+0.05) toast("Estás fuera de la zona del mapa (CP 35100); distancias aproximadas");
+if(lat<MAPA.lat0-0.05||lat>MAPA.lat1+0.05||lng<MAPA.lng0-0.05||lng>MAPA.lng1+0.05) toast(`Estás fuera de la zona del mapa (${AREA.nombre}); distancias aproximadas`);
 P.pos={lat,lng,label:"Mi ubicación"}; save(); const y=scrollY; render(); scrollTo(0,y); }, ()=>toast("No se pudo obtener tu ubicación"), {enableHighAccuracy:true,timeout:10000}); };
 const det=$("#tiendas"); if(det) det.ontoggle=()=>{ S.verTiendas=det.open; };
 const mp=$("#mapa"); if(mp) mp.onclick=e=>{ if(e.target.closest("a")) return; const r=mp.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*MAPA.w, y=(e.clientY-r.top)/r.height*MAPA.h;
