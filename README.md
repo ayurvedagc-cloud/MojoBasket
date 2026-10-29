@@ -22,8 +22,9 @@ Menú semanal, recetas y lista de la compra con precios reales de los supermerca
 | `RESEND_API_KEY` / `EMAIL_FROM` | Envío del enlace de acceso (Resend, dominio mojobasket.es) |
 | `SUPERADMIN_EMAILS` | Emails (separados por comas) con plan Pro y acceso a `/admin` |
 | `PRECIO_{SONNET,HAIKU,OPUS}_{IN,OUT}` | Opcional: USD por millón de tokens para el coste estimado del panel |
-| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` | Opcional: suscripción Pro con Stripe Checkout (sin ellas no aparece «Hazte Pro») |
-| `STRIPE_PRECIO_TEXTO` | Opcional: precio que se muestra en el botón (p. ej. «2,99 €/mes») |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Opcional: credenciales de la app de PayPal (developer.paypal.com) para la suscripción Pro |
+| `PAYPAL_PLAN_ID` / `PAYPAL_ENV` | Id del plan `P-…` (se crea desde el panel) y `sandbox` (por defecto) o `live`. Sin plan no aparece «Hazte Pro» |
+| `PAYPAL_PRECIO_TEXTO` | Opcional: precio que se muestra en el botón (p. ej. «2,99 €/mes») |
 | `ALERTAS_EMAIL` / `ALERTA_COSTE_DIA` | Opcional: destinatarios de las alertas (por defecto los SuperAdmin) y umbral de coste diario de Claude en USD (10) |
 
 ## Panel SuperAdmin (`/admin`)
@@ -33,15 +34,15 @@ Acceso solo con sesión de un email de `SUPERADMIN_EMAILS` (comprobado en el ser
 - **Uso y costes**: llamadas y coste estimado de Claude por día y modelo (30 días) e indicadores por supermercado.
 - **Catálogos**: frescura del recolector por cadena, histórico, forzar recolección y diagnóstico en vivo (`/api/salud`).
 - **Sistema**: despliegue, variables presentes (nunca sus valores), límites, avisos de configuración, email de prueba, tamaño de Blob por carpeta y limpieza de datos antiguos.
-- **Planes**: estado de Stripe y suscriptores, códigos Pro (duración, usos, caducidad, activar/desactivar) y Pro manual temporal o permanente.
+- **Planes**: estado de PayPal (y creación del plan de suscripción), suscriptores, códigos Pro (duración, usos, caducidad, activar/desactivar) y Pro manual temporal o permanente.
 - **Auditoría**: toda acción del panel queda registrada cifrada en `admin/audit/`.
 
 ## Acceso por enlace
 El enlace del email abre una página con el botón «Entrar» (GET no consume el enlace; el POST sí). Así los escáneres de Gmail/Outlook o el seguimiento de clics no gastan el enlace de un solo uso.
 
 ## Pro
-Plan efectivo (`planDe`): SuperAdmin, suscripción de Stripe activa/en impago (`usr.stripe`), o `plan: "pro"` guardado con `pro_hasta` opcional (códigos y Pro manual temporal).
-Stripe: `POST /api/cuenta?accion=pagar` → Checkout; vuelta por `pago_ok`; webhook `POST /api/cuenta?accion=stripe_webhook` (el evento se vuelve a pedir a la API por su id, no se confía en el cuerpo); `portal` → portal de cliente.
+Plan efectivo (`planDe`): SuperAdmin, suscripción de PayPal activa o cancelada con el periodo pagado en curso (`usr.sub`), o `plan: "pro"` guardado con `pro_hasta` opcional (códigos y Pro manual temporal).
+PayPal: `POST /api/cuenta?accion=pagar` crea la suscripción (`custom_id` = uid) y devuelve el enlace de aprobación; vuelta por `pago_ok?subscription_id=…`; webhook `POST /api/cuenta?accion=paypal_webhook` (eventos `BILLING.SUBSCRIPTION.*` y `PAYMENT.SALE.COMPLETED`; la suscripción se vuelve a pedir a la API por su id, no se confía en el cuerpo); `cancelar_sub` la cancela.
 
 ## Alertas
 Cron diario `/api/cron?tarea=alertas` (08:30 UTC): recolector al día y sin caídas de productos, Claude de ayer (tope y coste), errores de webhook e impagos, configuración peligrosa. Email solo si hay avisos; los lunes, resumen semanal.

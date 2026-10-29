@@ -110,35 +110,48 @@ test("códigos Pro: crear, canjear, límites y desactivar", async () => {
   await A("codigo_estado", { method: "POST", cookie: jefe.cookie, body: { id: c2.body.codigo.id, activo: false } });
   assert.equal((await C_("canjear", { method: "POST", cookie: leo.cookie, body: { codigo: c2.body.codigo.codigo } })).s, 404);
   const pl = await A("planes", { cookie: jefe.cookie });
-  assert.equal(pl.body.codigos.length, 2); assert.equal(pl.body.stripe.activo, false);
+  assert.equal(pl.body.codigos.length, 2); assert.equal(pl.body.paypal.activo, false);
 });
 
-test("Stripe: checkout y webhook verificado contra la API", async () => {
-  process.env.STRIPE_SECRET_KEY = "sk_test_x"; process.env.STRIPE_PRICE_PRO = "price_1";
+test("PayPal: suscribir, confirmar, webhook verificado contra la API y cancelar", async () => {
+  Object.assign(process.env, { PAYPAL_CLIENT_ID: "cid", PAYPAL_CLIENT_SECRET: "sec", PAYPAL_PLAN_ID: "P-PLAN1" });
   const P = await import("../lib/pagos.js");
   const leo = await entra("leo@ejemplo.es"), u = C.uid("leo@ejemplo.es");
-  let estado = "active"; const llamadas = [];
+  let status = "ACTIVE"; const llamadas = [];
+  const sub = () => ({ id: "I-SUB123456", status, custom_id: u, plan_id: "P-PLAN1", subscriber: { email_address: "pagador@pp.com" }, billing_info: { next_billing_time: "2026-12-01T10:00:00Z", failed_payments_count: 0 } });
   P.usaFetch(async (url, o) => {
-    llamadas.push([o.method, url.replace("https://api.stripe.com/v1", ""), o.body || ""]);
-    const r = (j) => ({ ok: true, status: 200, json: async () => j });
-    if (url.endsWith("/checkout/sessions")) return r({ url: "https://checkout.stripe.com/c/pay/cs_test_1" });
-    if (url.includes("/events/evt_")) return r({ type: "customer.subscription.updated", data: { object: { id: "sub_1", customer: "cus_1", status: estado, metadata: { uid: u }, items: { data: [{ current_period_end: 1893456000 }] } } } });
-    return { ok: false, status: 404, json: async () => ({ error: { message: "no" } }) };
+    const path = url.replace(/^https:\/\/api-m\.sandbox\.paypal\.com/, ""); llamadas.push([o.method, path, o.body || ""]);
+    const r = (j, st = 200) => ({ ok: true, status: st, json: async () => j });
+    if (path === "/v1/oauth2/token") { assert.match(o.headers.authorization, /^Basic /); return r({ access_token: "tok", expires_in: 3600 }); }
+    if (path === "/v1/billing/subscriptions" && o.method === "POST") return r({ id: "I-SUB123456", status: "APPROVAL_PENDING", links: [{ rel: "approve", href: "https://www.sandbox.paypal.com/webapps/billing/subscriptions?ba_token=BA-1" }] }, 201);
+    if (path === "/v1/billing/subscriptions/I-SUB123456") return r(sub());
+    if (path === "/v1/billing/subscriptions/I-SUB123456/cancel") { status = "CANCELLED"; return { ok: true, status: 204, json: async () => ({}) }; }
+    return { ok: false, status: 404, json: async () => ({ message: "no" }) };
   });
   const pg = await C_("pagar", { method: "POST", cookie: leo.cookie });
-  assert.equal(pg.body.url, "https://checkout.stripe.com/c/pay/cs_test_1");
-  assert.match(llamadas[0][2], /client_reference_id=/); assert.match(llamadas[0][2], /subscription_data%5Bmetadata%5D%5Buid%5D=/);
-  // el cuerpo del webhook no se cree: solo se usa el id
-  const w = await C_("stripe_webhook", { method: "POST", body: { id: "evt_1", type: "customer.subscription.updated", data: { object: { status: "active", metadata: { uid: "otro" } } } } });
-  assert.equal(w.s, 200); assert.equal(w.body.aplicado, true);
+  assert.match(pg.body.url, /ba_token=BA-1/);
+  const cuerpo = JSON.parse(llamadas.find((l) => l[1] === "/v1/billing/subscriptions")[2]);
+  assert.equal(cuerpo.custom_id, u); assert.equal(cuerpo.plan_id, "P-PLAN1"); assert.match(cuerpo.application_context.return_url, /accion=pago_ok/);
+  // vuelta de PayPal
+  const ok = await C_("pago_ok", { q: { subscription_id: "I-SUB123456" } });
+  assert.equal(ok.h.location, "/?cuenta=pro");
   let yo = await C_("yo", { cookie: leo.cookie });
-  assert.equal(yo.body.plan, "pro"); assert.equal(yo.body.suscripcion.estado, "active"); assert.equal(yo.body.suscripcion.hasta, "2030-01-01T00:00:00.000Z");
-  estado = "canceled";
-  await C_("stripe_webhook", { method: "POST", body: { id: "evt_2" } });
+  assert.equal(yo.body.plan, "pro"); assert.equal(yo.body.suscripcion.estado, "activa"); assert.equal(yo.body.suscripcion.hasta, "2026-12-01T10:00:00Z");
+  // webhook: el cuerpo dice otra cosa, pero manda lo que devuelve la API
+  status = "SUSPENDED";
+  const w = await C_("paypal_webhook", { method: "POST", body: { event_type: "BILLING.SUBSCRIPTION.SUSPENDED", resource: { id: "I-SUB123456", status: "ACTIVE", custom_id: "otro" } } });
+  assert.equal(w.body.aplicado, true);
+  assert.equal((await C_("yo", { cookie: leo.cookie })).body.plan, "gratis");
+  status = "ACTIVE";
+  await C_("paypal_webhook", { method: "POST", body: { event_type: "PAYMENT.SALE.COMPLETED", resource: { billing_agreement_id: "I-SUB123456" } } });
+  assert.equal((await C_("yo", { cookie: leo.cookie })).body.plan, "pro");
+  // cancelar: sigue siendo Pro hasta el final del periodo
+  assert.equal((await C_("cancelar_sub", { method: "POST", cookie: leo.cookie })).s, 200);
   yo = await C_("yo", { cookie: leo.cookie });
-  assert.equal(yo.body.plan, "gratis");
-  assert.equal((await C_("stripe_webhook", { method: "POST", body: { id: "malo" } })).body.ok, false);
-  delete process.env.STRIPE_SECRET_KEY; delete process.env.STRIPE_PRICE_PRO;
+  assert.equal(yo.body.suscripcion.estado, "cancelada"); assert.equal(yo.body.plan, "pro");
+  assert.equal(C.planDe(await C.leeUsuario(u), Date.parse("2026-12-02T00:00:00Z")), "gratis", "tras el periodo pagado vuelve a gratis");
+  assert.equal((await C_("paypal_webhook", { method: "POST", body: { event_type: "X", resource: {} } })).body.ignorado, true);
+  for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_PLAN_ID"]) delete process.env[k];
 });
 
 test("alertas: detecta configuración peligrosa sin enviar", async () => {
