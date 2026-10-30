@@ -1444,7 +1444,7 @@ return `<div class="card"><div class="sec-title"><h3>🛍️ ${esc(g.nombre)}</h
 <p class="small" style="margin:4px 0 8px">${esc(o.nota)}</p>
 <div class="prog" style="margin:4px 0 10px;width:100%"><i style="width:${Math.round(hechos/g.items.length*100)}%"></i></div>
 <p class="small" style="margin:0 0 8px"><b style="color:var(--ink)">${hechos}/${g.items.length}</b> en el carrito</p>
-${g.items.map(({it,key})=>{ const url=/\/product\//.test(it.url||"")?it.url:o.buscar(qBusqueda(it));
+${g.items.map(({it,key})=>{ const url=/^https:\/\/[^\s"]+\/product\//.test(it.url||"")?it.url:o.buscar(qBusqueda(it));
 return `<div class="item${S.checked[key]?" done":""}" data-key="${esc(key)}" role="button"><span class="cb">${S.checked[key]?"✓":""}</span>
 <span class="nm"><b>${esc(lineaPedido(it))}</b><small>${S.checked[key]?"en el carrito":"toca para marcar como añadido"}</small></span>
 <a class="btn mini ext" href="${esc(url)}" target="_blank" rel="noopener" data-ev="${/\/product\//.test(url)?"ver":"buscar"}" data-cad="${esc(g.sid)}">${/\/product\//.test(url)?"Ver":"Buscar"} ↗</a></div>`; }).join("")}

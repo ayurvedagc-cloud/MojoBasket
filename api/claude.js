@@ -11,7 +11,7 @@ const entrada = (u) => (u ? (u.input_tokens || 0) + (u.cache_creation_input_toke
 import { hayBlob } from "../lib/store.js";
 import * as C from "../lib/cuenta.js";
 
-const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
+const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?-admin3198s-projects\.vercel\.app$|^https:\/\/quecompro-precios\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
 const MAX_PROMPT = 80000, MAX_IMG = 6, MAX_IMG_B64 = 2_000_000;
 const LIMITE_HORA = +process.env.CLAUDE_LIMITE_HORA || 30; // peticiones por IP y hora (por instancia)
 const TOPE_DIA = +process.env.CLAUDE_TOPE_DIA || 600; // llamadas a Claude al día, todas las IP
@@ -116,9 +116,9 @@ export default async function handler(req, res) {
             : (e.limite === 1 ? "Ya has usado tu lista de prueba de esta semana." : `Has usado tus ${e.limite} listas de prueba de esta semana.`) + " Entra con tu email para tener más gratis y guardar tu historial." });
       }
       cuota = q.estado;
-      res.setHeader("x-mb-pase", C.firma({ t: "p" }, 30 * 60));
+      res.setHeader("x-mb-pase", C.firma({ t: "p", i: C.hashIp(ip) }, 30 * 60));
       if (cuota) res.setHeader("x-mb-cuota", encodeURIComponent(JSON.stringify(C.publicoCuota(cuota))));
-    } else if (!C.verifica(String(b.pase || req.headers["x-mb-pase"] || ""), "p")) {
+    } else if ((() => { const p = C.verifica(String(b.pase || req.headers["x-mb-pase"] || ""), "p"); return !p || (p.i && p.i !== C.hashIp(ip)); })()) {
       return res.status(402).json({ code: "pase", error: "Empieza una lista nueva para continuar." });
     }
   }

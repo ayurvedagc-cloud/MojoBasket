@@ -7,7 +7,7 @@ import { informe } from "../lib/informe.js";
 import { cuenta } from "../lib/cuentaApi.js";
 import { admin } from "../lib/admin.js";
 
-const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
+const ORIGENES = /^https:\/\/(www\.)?mojobasket\.es$|^https:\/\/quecompro-precios(-[a-z0-9-]+)?-admin3198s-projects\.vercel\.app$|^https:\/\/quecompro-precios\.vercel\.app$|^http:\/\/localhost(:\d+)?$/;
 
 export default async function handler(req, res) {
   const r = req.query?.r || "evento";
