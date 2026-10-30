@@ -16,6 +16,7 @@ const MAX_PROMPT = 80000, MAX_IMG = 6, MAX_IMG_B64 = 2_000_000;
 const LIMITE_HORA = +process.env.CLAUDE_LIMITE_HORA || 30; // peticiones por IP y hora (por instancia)
 const TOPE_DIA = +process.env.CLAUDE_TOPE_DIA || 600; // llamadas a Claude al día, todas las IP
 const vistos = new Map();
+const memDia = { dia: "", n: 0 };
 const GW = "https://ai-gateway.vercel.sh";
 
 /** Modelos del AI Gateway por nivel: AI_GATEWAY_MODEL(_RAPIDO) o el catálogo público, del más reciente al más antiguo. */
@@ -96,6 +97,11 @@ export default async function handler(req, res) {
   const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "?";
   if (!limita(ip)) return res.status(429).json({ error: "Demasiadas peticiones. Espera un rato.", code: "rate_limited" });
   const uso = hayBlob() ? await usoHoy().catch(() => null) : null;
+  // Respaldo si Blob no responde (p. ej. store suspendido): contador por instancia, para que el tope nunca desaparezca.
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (memDia.dia !== hoy) { memDia.dia = hoy; memDia.n = 0; }
+  if (!uso && memDia.n >= Math.max(1, Math.floor(TOPE_DIA / 4))) return res.status(429).json({ error: "MojoBasket ha llegado al límite de uso de hoy. Vuelve a intentarlo mañana.", code: "tope_dia" });
+  memDia.n++;
   if (uso && uso.llamadas >= TOPE_DIA) return res.status(429).json({ error: "MojoBasket ha llegado al límite de uso de hoy. Vuelve a intentarlo mañana.", code: "tope_dia" });
 
   const prompt = String(b.prompt || "");
