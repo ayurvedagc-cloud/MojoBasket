@@ -239,6 +239,8 @@ T = {
 "Completa {n} comensal ›": ("Fill in {n} diner ›", "Ergänze {n} Person ›"),
 "Completa {n} comensales ›": ("Fill in {n} diners ›", "Ergänze {n} Personen ›"),
 "Completa tus datos": ("Fill in your details", "Ergänze deine Angaben"),
+"Entrar con tu email": ("Sign in with your email", "Mit deiner E-Mail anmelden"),
+"MojoBasket, inicio": ("MojoBasket, home", "MojoBasket, Startseite"),
 # --- avisos y estados ---
 "Buscando tu ubicación…": ("Finding your location…", "Standort wird gesucht…"),
 "Cesta recalculada": ("Basket recalculated", "Warenkorb neu berechnet"),
@@ -278,6 +280,7 @@ FRAG = [
  [r"· dom\. solo mañana", "· Sun. mornings only", "· So. nur vormittags"],
  [r"Sección vegana y ecológica", "Vegan and organic section", "Vegane und Bio-Abteilung"],
  [r"El más grande de la zona", "The biggest in the area", "Der größte in der Gegend"],
+ [r"^Mis listas · (.*)$", "My lists · $1", "Meine Listen · $1"],
  [r"^(.+) en Google Maps$", "$1 on Google Maps", "$1 auf Google Maps"],
  [r"^Añadir (.+)$", "Add $1", "$1 hinzufügen"],
  [r"^Quitar (.+)$", "Remove $1", "$1 entfernen"],

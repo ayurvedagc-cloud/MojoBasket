@@ -37,7 +37,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:16px;line-height:1.45}
-body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+body{padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input,textarea{font:inherit;color:inherit}
 .app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:16px 20px 120px}
@@ -234,9 +234,15 @@ details.rec[open] summary .sm{display:none}
 .ejemplo-banda>div{flex:1}.ejemplo-banda b{display:block}.ejemplo-banda small{display:block;color:var(--muted);font-size:12.5px}.ejemplo-banda button{background:var(--ink);color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;white-space:nowrap}
 .rapido{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border-radius:18px;padding:12px 12px 12px 16px;margin:14px 0 0}
 .rapido>div{flex:1}.rapido b{display:block}.rapido small{display:block;color:var(--muted);font-size:13px;line-height:1.35}.rapido button{background:var(--accent);border-radius:14px;padding:12px 16px;font-weight:800;white-space:nowrap}
-.cuenta-pill{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:15;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:700;box-shadow:var(--shadow)}
-.cuenta-pill.on{background:var(--atl);border-color:var(--atl);color:#fff}
-.app.con-pill{padding-top:58px}
+/* barra superior */
+.mb-top{position:sticky;top:0;z-index:15;background:rgba(244,231,207,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.mb-top .in{max-width:560px;margin:0 auto;height:58px;padding:0 16px 0 20px;display:flex;align-items:center;gap:10px}
+.mb-top .marca{display:flex;align-items:center;gap:9px;flex:1;min-width:0;color:var(--ink);text-decoration:none;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:21px;letter-spacing:-.01em}
+.mb-top .marca img{width:32px;height:32px;border-radius:9px;flex:none}
+.cuenta-btn{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 14px 0 12px;border-radius:999px;background:var(--ink);color:#fff;font-weight:700;font-size:15px;white-space:nowrap}
+.cuenta-btn svg{flex:none}
+.cuenta-btn.on{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.cuenta-btn .pro{background:var(--accent);color:var(--ink);border-radius:6px;font-size:11px;font-weight:800;padding:1px 6px;letter-spacing:.04em}
 dialog.cuenta{border:0;border-radius:24px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 40px);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(31,29,27,.3)}
 dialog.cuenta::backdrop{background:rgba(31,29,27,.45)}
 .cuenta .in{padding:22px 22px 18px}
@@ -260,12 +266,13 @@ dialog.cuenta::backdrop{background:rgba(31,29,27,.45)}
 </style>
 </head>
 <body>
+<header class="mb-top"><div class="in"><a class="marca" href="/" aria-label="MojoBasket, inicio"><img src="/icon.svg" alt=""><span>MojoBasket</span></a>
+<button class="cuenta-btn hidden" id="cuentaBtn" aria-haspopup="dialog"></button></div></header>
 <div class="app" id="app"></div>
 <div class="cta-wrap" id="ctaWrap"><button class="cta" id="cta"></button></div>
 <p class="legal"><a href="/legal.html">Aviso legal, privacidad y cookies</a> · MojoBasket · un proyecto de AllwaysU</p>
 <script>document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-lang]");if(b&&window.MB_I18N)window.MB_I18N.set(b.dataset.lang);});</script>
 <div class="toast" id="toast"></div>
-<button class="cuenta-pill hidden" id="cuentaBtn" aria-haspopup="dialog">Entrar</button>
 <dialog class="cuenta" id="cuentaDlg" aria-label="Tu cuenta"></dialog>
 <script>
 (() => {
@@ -544,8 +551,9 @@ function pintaPill(){
 const b=$("#cuentaBtn"); if(!b) return;
 b.classList.toggle("hidden",!(STANDALONE&&CUENTA.activas));
 b.classList.toggle("on",CUENTA.sesion);
-b.textContent=CUENTA.sesion?"👤 Mis listas":"Entrar";
-$("#app")?.classList.toggle("con-pill",STANDALONE&&CUENTA.activas);
+const ico=`<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
+b.innerHTML=CUENTA.sesion?`${ico}<span>Mis listas</span>${CUENTA.plan==="pro"?`<span class="pro">PRO</span>`:""}`:`${ico}<span>Entrar</span>`;
+b.setAttribute("aria-label",CUENTA.sesion?`Mis listas · ${CUENTA.email||""}`:"Entrar con tu email");
 }
 async function nubeGuarda(plan){
 if(!STANDALONE||!CUENTA.sesion||!plan) return;
