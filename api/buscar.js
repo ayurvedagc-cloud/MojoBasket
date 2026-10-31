@@ -23,9 +23,8 @@ export default wrap(async (q) => {
     // Sin instantánea (cron pendiente o Blob caído): búsqueda en vivo consulta a consulta.
     console.warn("buscar: mercadona en vivo —", e.message);
     const res = await pool(consultas, 8, async (c) => {
-      const l = await mc.busca(cp, c, 30);
-      const f = filtra(l, { q: c, orden: "precio_ud", limit: n }).productos;
-      return (f.length ? f : l.slice(0, n)).map(compacto);
+      // Orden del buscador de Mercadona (entiende sinónimos: «leche de avena» → «bebida de avena»).
+      return (await mc.busca(cp, c, n)).map(compacto);
     });
     const fallos = res.filter((x) => x?.__error);
     if (fallos.length === consultas.length) throw Object.assign(new Error(`Mercadona en vivo: ${fallos[0].__error}`), { status: 502 });
