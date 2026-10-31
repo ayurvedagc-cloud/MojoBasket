@@ -38,3 +38,19 @@ test("uso de Claude: nombres por llamada y suma sin carreras", async () => {
   assert.deepEqual(u.modelos["anthropic/claude-haiku-5.5"], { llamadas: 2, in: 10685, out: 10332 });
   assert.equal(u.modelos["anthropic/claude-sonnet-5.5"].llamadas, 5);
 });
+
+test("lotes: nombre con recuentos, recuento sin descargar y uso agrupado", async () => {
+  const { nombreLote, cuentaNombre, agrupaUso, nombreUso, sumaNombres } = await import("../lib/metricas.js");
+  const evs = [limpia({ tipo: "lista", supers: ["mercadona"] }), limpia({ tipo: "clic", cadena: "spar" }), limpia({ tipo: "clic", cadena: "spar" }), limpia({ tipo: "copiar" })];
+  const p = nombreLote("2026-10-31", evs, new Date("2026-10-31T03:41:05Z"));
+  assert.match(p, /^ev\/2026-10-31\/034105-lote-L1-C2-P1-H0-[a-z0-9]{1,4}\.json$/);
+  const c = { lista: 0, clic: 0, copiar: 0, claude_chrome: 0 };
+  cuentaNombre(p, c); cuentaNombre("ev/2026-10-30/120000-lista-ab12.json", c);
+  assert.deepEqual(c, { lista: 2, clic: 2, copiar: 1, claude_chrome: 0 });
+  const g = agrupaUso([{ d: "2026-10-31", model: "m/a", in: 10, out: 5 }, { d: "2026-10-31", model: "m/a", in: 1, out: 2 }, { d: "2026-10-31", model: "m/b", in: 3, out: 3 }]);
+  assert.equal(g.length, 2);
+  const nombres = g.map((a) => nombreUso(a.model, a.in, a.out, new Date("2026-10-31T03:00:00Z"), a.n));
+  const u = sumaNombres("2026-10-31", nombres);
+  assert.equal(u.llamadas, 3);
+  assert.deepEqual(u.modelos["m/a"], { llamadas: 2, in: 11, out: 7 });
+});

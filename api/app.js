@@ -2,6 +2,7 @@
 // Unificadas para no pasar de 12 funciones (límite Hobby).
 // POST /api/evento  {tipo:"lista"|"clic"|"copiar"|"claude_chrome", ...} → 204
 // Métricas anónimas de la web (sendBeacon). Solo acepta peticiones de los orígenes de MojoBasket.
+import { waitUntil } from "@vercel/functions";
 import { limpia, registra } from "../lib/metricas.js";
 import { informe } from "../lib/informe.js";
 import { cuenta } from "../lib/cuentaApi.js";
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
   if (Buffer.isBuffer?.(b)) { try { b = JSON.parse(b.toString("utf8")); } catch { b = null; } }
   const ev = limpia(b);
   if (!ev) return res.status(400).end();
-  try { await registra(ev); } catch (e) { console.error("evento", e?.message || e); }
+  waitUntil(registra(ev).catch((e) => console.error("evento", e?.message || e))); // volcado en lote, diferido
   res.setHeader("cache-control", "no-store");
   return res.status(204).end();
 }
