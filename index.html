@@ -1161,9 +1161,13 @@ etapa(sups.length>1?`Buscando ${comprar.length} productos en ${sups.length} súp
 const resultados=await Promise.all(sups.map(async s=>{
 try{
 const ent=new Map();
+let bus=null;
 if(s.api&&!s.fallo){
+try{ bus=await api(`/api/buscar?cadena=${s.api}&cp=${CP}&n=${sups.length>2?4:6}&q=${encodeURIComponent(consultas.join("|"))}`); }
+catch(e){ console.warn("buscar",s.api,e); s.fallo=e.message; avisos.push(`${s.n}: catálogo no disponible ahora mismo, precios estimados.`); }
+}
+if(bus){
 const pid=new Map((ofertasPor[s.id]||[]).map(p=>[String(p.id),p]));
-const bus=await api(`/api/buscar?cadena=${s.api}&cp=${CP}&n=${sups.length>2?4:6}&q=${encodeURIComponent(consultas.join("|"))}`);
 const cands=comprar.map(n=>{
 const l=[...(bus.resultados?.[n.consulta]||[])];
 const [pre,oid]=String(n.oferta_id||"").split(":"); const o=pre===s.id&&pid.get(oid);
